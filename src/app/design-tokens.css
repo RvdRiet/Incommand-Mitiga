@@ -1,0 +1,50 @@
+/* Modern design tokens — loaded after base globals */
+:root {
+  color-scheme: light;
+
+  /* Brand */
+  --ic-brand: #e11d48;
+  --ic-brand-hover: #be123c;
+  --ic-brand-muted: #fff1f2;
+  --ic-red: var(--ic-brand);
+  --ic-red-dark: var(--ic-brand-hover);
+
+  /* Neutrals */
+  --ic-bg: #f1f5f9;
+  --ic-bg-elevated: #ffffff;
+  --ic-surface: #ffffff;
+  --ic-surface-muted: #f8fafc;
+  --ic-card: #ffffff;
+  --ic-border: #e2e8f0;
+  --ic-border-strong: #cbd5e1;
+  --ic-text: #0f172a;
+  --ic-text-secondary: #475569;
+  --ic-muted: #64748b;
+  --ic-muted-light: #94a3b8;
+
+  /* Accent */
+  --ic-primary: #0d9488;
+  --ic-primary-muted: #ccfbf1;
+  --ic-metric: #0284c7;
+  --ic-info-bg: #eff6ff;
+
+  /* Sidebar */
+  --ic-sidebar: #0f172a;
+  --ic-sidebar-elevated: #1e293b;
+  --ic-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --ic-sidebar-active: rgba(225, 29, 72, 0.15);
+  --ic-sidebar-text: #94a3b8;
+  --ic-sidebar-text-active: #f8fafc;
+
+  /* Layout */
+  --sidebar-w: 240px;
+  --topbar-h: 56px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.08);
+  --transition: 0.18s ease;
+}
