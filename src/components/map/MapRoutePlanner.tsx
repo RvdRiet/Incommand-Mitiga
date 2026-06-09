@@ -26,6 +26,9 @@ type MapRoutePlannerProps = {
   ) => void;
   onRoutesCalculated?: (variants: RouteVariant[]) => void;
   onVariantFocus?: (variant: RouteVariant) => void;
+  onRouteSaved?: (routeId: string) => void;
+  /** True when start, end, and calculated routes are ready to persist. */
+  onCanSaveChange?: (canSave: boolean) => void;
 };
 
 type EnrichedVariant = RouteVariant & { intersectsHazard?: boolean; hazardHits?: string[] };
@@ -122,6 +125,8 @@ function GeocodeField({
 
 export type MapRoutePlannerHandle = {
   handleMapClick: (lng: number, lat: number) => void;
+  loadRoute: (route: SupplyRoute) => void;
+  saveRoute: () => boolean;
 };
 
 export const MapRoutePlanner = forwardRef<MapRoutePlannerHandle, MapRoutePlannerProps>(
@@ -134,6 +139,8 @@ export const MapRoutePlanner = forwardRef<MapRoutePlannerHandle, MapRoutePlanner
       onWaypointsChange,
       onRoutesCalculated,
       onVariantFocus,
+      onRouteSaved,
+      onCanSaveChange,
     },
     ref,
   ) {
@@ -271,8 +278,30 @@ export const MapRoutePlanner = forwardRef<MapRoutePlannerHandle, MapRoutePlanner
     runVerification,
   ]);
 
-  const saveRoute = () => {
-    if (!origin || !destination || variants.length === 0) return;
+  const loadRoute = useCallback((route: SupplyRoute) => {
+    setEditingRouteId(route.id);
+    setRouteName(route.name);
+    setPurpose(route.purpose);
+    setOrigin(route.origin);
+    setDestination(route.destination);
+    setDriverPosition(route.midJourneyOrigin);
+    setViaPoints(route.viaPoints);
+    setAvoidAnnotationId(route.avoidAnnotationId ?? "");
+    setVariants(route.variants);
+    const focus = route.variants.find((v) => v.id === route.selectedVariantId) ?? route.variants[0];
+    setPreviewId(focus?.id ?? null);
+    if (focus) onVariantFocus?.(focus);
+    setBriefing(route.briefingNotes);
+  }, [onVariantFocus]);
+
+  const canSaveRoute = Boolean(origin && destination && variants.length > 0);
+
+  useEffect(() => {
+    onCanSaveChange?.(canSaveRoute);
+  }, [canSaveRoute, onCanSaveChange]);
+
+  const saveRoute = useCallback(() => {
+    if (!origin || !destination || variants.length === 0) return false;
     const selected = previewId ?? variants[0]?.id ?? null;
     if (editingRouteId) {
       updateSupplyRoute(editingRouteId, {
@@ -287,6 +316,7 @@ export const MapRoutePlanner = forwardRef<MapRoutePlannerHandle, MapRoutePlanner
         selectedVariantId: selected,
         briefingNotes: briefing,
       });
+      onRouteSaved?.(editingRouteId);
     } else {
       const id = addSupplyRoute({
         name: routeName,
@@ -302,28 +332,31 @@ export const MapRoutePlanner = forwardRef<MapRoutePlannerHandle, MapRoutePlanner
         status: "planning",
       });
       setEditingRouteId(id);
+      onRouteSaved?.(id);
     }
-  };
-
-  const loadRoute = (route: SupplyRoute) => {
-    setEditingRouteId(route.id);
-    setRouteName(route.name);
-    setPurpose(route.purpose);
-    setOrigin(route.origin);
-    setDestination(route.destination);
-    setDriverPosition(route.midJourneyOrigin);
-    setViaPoints(route.viaPoints);
-    setAvoidAnnotationId(route.avoidAnnotationId ?? "");
-    setVariants(route.variants);
-    const focus = route.variants.find((v) => v.id === route.selectedVariantId) ?? route.variants[0];
-    setPreviewId(focus?.id ?? null);
-    if (focus) onVariantFocus?.(focus);
-    setBriefing(route.briefingNotes);
-  };
+    return true;
+  }, [
+    origin,
+    destination,
+    variants,
+    previewId,
+    editingRouteId,
+    routeName,
+    purpose,
+    driverPosition,
+    viaPoints,
+    avoidAnnotationId,
+    briefing,
+    updateSupplyRoute,
+    addSupplyRoute,
+    onRouteSaved,
+  ]);
 
   useImperativeHandle(
     ref,
     () => ({
+      loadRoute,
+      saveRoute,
       handleMapClick: (lng: number, lat: number) => {
         if (pickMode === "none") return;
         const point: RouteWaypoint = {
@@ -339,7 +372,7 @@ export const MapRoutePlanner = forwardRef<MapRoutePlannerHandle, MapRoutePlanner
         onPickModeChange("none");
       },
     }),
-    [pickMode, onPickModeChange],
+    [pickMode, onPickModeChange, loadRoute, saveRoute],
   );
 
   const pickHint =
@@ -586,8 +619,13 @@ export const MapRoutePlanner = forwardRef<MapRoutePlannerHandle, MapRoutePlanner
           </label>
 
           <div className="ic-map-navbar__btn-row">
-            <button type="button" className="ic-map-navbar__btn ic-map-navbar__btn--primary" onClick={saveRoute}>
-              Save route brief
+            <button
+              type="button"
+              className="ic-map-navbar__btn ic-map-navbar__btn--primary"
+              onClick={saveRoute}
+              disabled={!canSaveRoute}
+            >
+              Save route
             </button>
             {previewId ? (
               <a

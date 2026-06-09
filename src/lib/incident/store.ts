@@ -4,13 +4,20 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import {
+  buildFieldOrder,
   buildInitialFormContent,
   displayFormName,
   getIcsFormTemplate,
+  parseFormContent,
+  serializeFormFields,
 } from "./ics-forms-catalog";
 import { createDefaultContactGroups, createDefaultStatusBoard } from "./d4h-defaults";
 import { getPlayTemplate } from "./plays-catalog";
 import { createInitialIncidentState, defaultSituation } from "./initial-state";
+import {
+  appendActivityLog,
+  runWithoutStoreActivityLog,
+} from "./activity-log";
 import { newId, nowIso } from "./id";
 import type {
   ActivationLevel,
@@ -97,6 +104,8 @@ const incidentPersistMerge = (
           status: f.status ?? "draft",
           pdfUrl: f.pdfUrl ?? null,
           inIap: f.inIap ?? false,
+          savedAt: f.savedAt ?? null,
+          filledBy: f.filledBy ?? null,
         }))
       : current.forms,
     utilities: Array.isArray(p.utilities)
@@ -129,9 +138,22 @@ type IncidentActions = {
   assignPersonnelToRole: (groupId: string, roleId: string, personnelId: string | null) => void;
 
   addLog: (message: string, tags?: string[], author?: string) => void;
+  recordActivity: (record: {
+    message: string;
+    tags?: string[];
+    author?: string;
+    kind?: import("./types").ActivityLogKind;
+    target?: string;
+    detail?: string;
+  }) => void;
 
   addForm: (templateId: string) => string | null;
   updateForm: (id: string, patch: Partial<IcsFormRecord>) => void;
+      saveForm: (
+        id: string,
+        actor: { name: string; email?: string | null },
+        options?: { pdfFileName?: string | null },
+      ) => boolean;
   removeForm: (id: string) => void;
 
   addTaskList: () => void;
@@ -316,17 +338,21 @@ export function createIncidentStore(eventId: string) {
 
       addLog: (message, tags = [], author = "Operator") => {
         if (!message.trim()) return;
-        const entry: LogEntry = {
-          id: newId(),
-          message: message.trim(),
-          tags,
-          author,
-          createdAt: nowIso(),
-        };
-        set((s) => ({
-          logs: [entry, ...s.logs],
-          audit: [...s.audit, audit(author, `Log: ${message.slice(0, 80)}`)],
-        }));
+        runWithoutStoreActivityLog(() => {
+          get().recordActivity({
+            message: message.trim(),
+            tags: ["user", ...tags],
+            author,
+            kind: "user",
+          });
+        });
+      },
+
+      recordActivity: (record) => {
+        if (!record.message.trim()) return;
+        runWithoutStoreActivityLog(() => {
+          appendActivityLog(set, record);
+        });
       },
 
       addForm: (templateId) => {
@@ -364,6 +390,8 @@ export function createIncidentStore(eventId: string) {
           officialTitle: template.title,
           formType: "ICS",
           modifiedAt: nowIso(),
+          savedAt: null,
+          filledBy: null,
           folderId: null,
           content,
           status: "draft",
@@ -383,6 +411,44 @@ export function createIncidentStore(eventId: string) {
             f.id === id ? { ...f, ...patch, modifiedAt: nowIso() } : f,
           ),
         }));
+      },
+
+      saveForm: (id, actor, options) => {
+        const form = get().forms.find((f) => f.id === id);
+        if (!form?.templateId) return false;
+        const template = getIcsFormTemplate(form.templateId);
+        if (!template) return false;
+
+        const { fields } = parseFormContent(form.content, form.templateId);
+        const savedAt = nowIso();
+        const content = serializeFormFields(form.templateId, fields, {
+          fieldOrder: buildFieldOrder(template),
+          meta: {
+            savedAt,
+            savedBy: actor.name,
+            savedByEmail: actor.email ?? null,
+            pdfFileName: options?.pdfFileName ?? null,
+          },
+        });
+
+        set((s) => ({
+          forms: s.forms.map((f) =>
+            f.id === id
+              ? {
+                  ...f,
+                  content,
+                  savedAt,
+                  filledBy: actor.name,
+                  modifiedAt: savedAt,
+                }
+              : f,
+          ),
+          audit: [
+            ...s.audit,
+            audit(actor.name, `Form saved: ${form.name}`),
+          ],
+        }));
+        return true;
       },
 
       removeForm: (id) => {

@@ -11,6 +11,7 @@ import {
   getActiveEvents,
   getArchivedEvents,
   useEventsStore,
+  useEventsStoreHydrated,
 } from "@/lib/events/store";
 import type { EventRecord, EventStatus } from "@/lib/events/types";
 
@@ -25,6 +26,7 @@ const LANDING_MAP_CENTER: [number, number] = [31.17485, -24.43707];
 
 export function EventsLandingPage() {
   const router = useRouter();
+  const storeHydrated = useEventsStoreHydrated();
   const organizationName = useEventsStore((s) => s.organizationName);
   const events = useEventsStore((s) => s.events);
   const createEvent = useEventsStore((s) => s.createEvent);
@@ -91,7 +93,9 @@ export function EventsLandingPage() {
 
           <h2 className="events-section-title">Active events</h2>
           <ul className="events-list">
-            {active.length === 0 ? (
+            {!storeHydrated ? (
+              <li className="events-empty">Loading events…</li>
+            ) : active.length === 0 ? (
               <li className="events-empty">No active events yet. Create one to get started.</li>
             ) : (
               active.map((event) => (
@@ -100,7 +104,7 @@ export function EventsLandingPage() {
             )}
           </ul>
 
-          {archived.length > 0 ? (
+          {storeHydrated && archived.length > 0 ? (
             <section className="events-archived">
               <button
                 type="button"

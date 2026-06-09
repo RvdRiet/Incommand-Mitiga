@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -9,6 +10,9 @@ import { defaultSituation } from "@/lib/incident/initial-state";
 import type { EventRecord, EventStatus } from "./types";
 
 export const DEFAULT_ORGANIZATION_NAME = "Ehlanzeni District Municipality";
+
+/** Stable default event id so SSR matches the first client paint before localStorage rehydrates. */
+export const DEFAULT_SEED_EVENT_ID = "00000000-0000-4000-8000-000000000001";
 
 const LEGACY_INCIDENT_KEY = "mitiga-incident-v1";
 
@@ -74,16 +78,31 @@ type EventsActions = {
 export type EventsStore = EventsState & EventsActions;
 
 const seedStadiumEvent = (): EventRecord => ({
-  id: newId(),
+  id: DEFAULT_SEED_EVENT_ID,
   name: "Stadium Event",
   status: "none",
-  startDate: new Date().toISOString().slice(0, 16),
+  startDate: "2026-01-01T08:00",
   endDate: "",
   archived: false,
   lat: -25.7479,
   lng: 28.2293,
-  createdAt: nowIso(),
+  createdAt: "2026-01-01T08:00:00.000Z",
 });
+
+/** Wait for persisted events before rendering links (avoids SSR/client href mismatch). */
+export function useEventsStoreHydrated() {
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    if (useEventsStore.persist.hasHydrated()) {
+      setHydrated(true);
+      return;
+    }
+    return useEventsStore.persist.onFinishHydration(() => setHydrated(true));
+  }, []);
+
+  return hydrated;
+}
 
 export const useEventsStore = create<EventsStore>()(
   persist(

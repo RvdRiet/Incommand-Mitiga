@@ -82,6 +82,8 @@ export type MapCanvasProps = {
     circleRadiusMeters: number;
   }) => void;
   onMapClick?: (lng: number, lat: number) => void;
+  /** Fired when the user clicks a saved or draft route line on the map. */
+  onRouteLineClick?: (payload: { routeId?: string; variantId: string }) => void;
   basemapTheme?: MapBasemapTheme;
 };
 
@@ -157,7 +159,12 @@ function installOverlayLayers(map: MaplibreMap) {
     source: SOURCE_OVERLAYS,
     filter: ["==", ["geometry-type"], "Point"],
     paint: {
-      "circle-radius": 7,
+      "circle-radius": [
+        "case",
+        ["==", ["get", "dimmed"], true],
+        5,
+        7,
+      ],
       "circle-color": [
         "match",
         ["get", "kind"],
@@ -168,6 +175,12 @@ function installOverlayLayers(map: MaplibreMap) {
         "route-via",
         "#d97706",
         "#0284c7",
+      ],
+      "circle-opacity": [
+        "case",
+        ["==", ["get", "dimmed"], true],
+        0.45,
+        1,
       ],
       "circle-stroke-width": 2,
       "circle-stroke-color": "#fff",
@@ -246,6 +259,7 @@ const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(function MapCanvas
     onDrawComplete,
     onDrawStateChange,
     onMapClick,
+    onRouteLineClick,
     basemapTheme = "light",
   },
   ref,
@@ -253,6 +267,7 @@ const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(function MapCanvas
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MaplibreMap | null>(null);
   const onMapClickRef = useRef(onMapClick);
+  const onRouteLineClickRef = useRef(onRouteLineClick);
   const onDrawCompleteRef = useRef(onDrawComplete);
   const onDrawStateChangeRef = useRef(onDrawStateChange);
   const drawModeRef = useRef(drawMode);
@@ -273,6 +288,7 @@ const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(function MapCanvas
   incidentMarkerRef.current = incidentMarker;
 
   onMapClickRef.current = onMapClick;
+  onRouteLineClickRef.current = onRouteLineClick;
   onDrawCompleteRef.current = onDrawComplete;
   onDrawStateChangeRef.current = onDrawStateChange;
   drawModeRef.current = drawMode;
@@ -544,7 +560,37 @@ const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(function MapCanvas
           }
 
           if (mode === "none" || mode === "point") {
+            const m = mapRef.current;
+            if (!m) return;
+            const routeHits = m.queryRenderedFeatures(e.point, {
+              layers: ["ic-map-route-lines"],
+            });
+            const top = routeHits[0];
+            const variantId = top?.properties?.variantId;
+            if (typeof variantId === "string" && onRouteLineClickRef.current) {
+              const routeId = top.properties?.routeId;
+              onRouteLineClickRef.current({
+                routeId: typeof routeId === "string" ? routeId : undefined,
+                variantId,
+              });
+              return;
+            }
             onMapClickRef.current?.(lng, lat);
+          }
+        });
+
+        map.on("mouseenter", "ic-map-route-lines", () => {
+          const m = mapRef.current;
+          if (!m) return;
+          if (drawModeRef.current === "none" || drawModeRef.current === "point") {
+            m.getCanvas().style.cursor = "pointer";
+          }
+        });
+        map.on("mouseleave", "ic-map-route-lines", () => {
+          const m = mapRef.current;
+          if (!m) return;
+          if (drawModeRef.current === "none") {
+            m.getCanvas().style.cursor = "";
           }
         });
 

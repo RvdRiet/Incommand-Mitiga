@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { TopBar } from "@/components/dashboard/TopBar";
-import { useEventId, useIncidentStore } from "@/context/EventContext";
+import { useEventId, useIncidentStore, useIncidentStoreHydrated } from "@/context/EventContext";
 import { getModuleBySlug } from "@/lib/navigation/modules";
 
 import { ModuleToolbar } from "./ModuleToolbar";
@@ -14,6 +14,7 @@ import { useModuleAddHandler } from "./useModuleAdd";
 
 export function IncidentLayout({ moduleSlug }: { moduleSlug: string }) {
   const eventId = useEventId();
+  const storeHydrated = useIncidentStoreHydrated();
   const mod = getModuleBySlug(moduleSlug);
   const isDashboard = !moduleSlug;
   const situation = useIncidentStore((s) => s.situation);
@@ -64,9 +65,15 @@ export function IncidentLayout({ moduleSlug }: { moduleSlug: string }) {
     moduleSlug !== "settings" &&
     moduleSlug !== "weather";
 
-  const elapsed = situation.startDate
-    ? formatElapsed(new Date(situation.startDate), new Date())
-    : "— —";
+  if (!storeHydrated) {
+    return (
+      <div className="ic-app">
+        <main className="ic-main ic-main--module" style={{ padding: 24 }}>
+          <p className="ic-empty-hint">Loading workspace…</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className={`ic-app${sidebarOpen ? " ic-app--sidebar-open" : ""}`}>
@@ -75,7 +82,13 @@ export function IncidentLayout({ moduleSlug }: { moduleSlug: string }) {
         activationLevel={situation.activationLevel}
         moduleLabel={mod?.label}
         moduleSlug={moduleSlug}
-        timerLabel={elapsed}
+        timerLabel={
+          situation.startDate ? (
+            <ElapsedTimer startDate={situation.startDate} />
+          ) : (
+            "— —"
+          )
+        }
       />
       <ModuleToolbar
         eventId={eventId}
@@ -138,4 +151,23 @@ function formatElapsed(start: Date, end: Date) {
   const days = Math.floor(ms / 86400000);
   const hours = Math.floor((ms % 86400000) / 3600000);
   return `${days}d ${hours}h`;
+}
+
+/** Client-only timer so SSR HTML does not depend on `Date.now()`. */
+function ElapsedTimer({ startDate }: { startDate: string }) {
+  const [label, setLabel] = useState("— —");
+
+  useEffect(() => {
+    const start = new Date(startDate);
+    if (Number.isNaN(start.getTime())) {
+      setLabel("— —");
+      return;
+    }
+    const tick = () => setLabel(formatElapsed(start, new Date()));
+    tick();
+    const id = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(id);
+  }, [startDate]);
+
+  return <>{label}</>;
 }

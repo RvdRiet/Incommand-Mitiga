@@ -4,12 +4,13 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import { useIncidentStore } from "@/context/EventContext";
 import { useMapBasemapTheme } from "@/lib/maps/basemap-theme";
-import { mergeFeatureCollections } from "@/lib/maps/geo-utils";
+import { emptyFeatureCollection, mergeFeatureCollections } from "@/lib/maps/geo-utils";
 import { annotationsToFeatureCollection } from "@/lib/maps/map-annotations";
 import type { RouteVariant, RouteWaypoint } from "@/lib/maps/routing-types";
 import {
   boundsForVariants,
   routesToFeatureCollection,
+  supplyRoutesWaypointMarkers,
   waypointMarkersCollection,
 } from "@/lib/maps/routes-geojson";
 
@@ -20,6 +21,7 @@ import MapCanvas, {
 } from "./MapCanvas";
 import { MapDrawingToolbar, type MapTool } from "./MapDrawingToolbar";
 import { MapRouteFloatingPanel } from "./MapRouteFloatingPanel";
+import { MapRouteInfoPanel } from "./MapRouteInfoPanel";
 import {
   MapRoutePlanner,
   type MapRoutePlannerHandle,
@@ -33,6 +35,7 @@ export function EventMapView() {
   const updateSituation = useIncidentStore((s) => s.updateSituation);
   const addMapAnnotation = useIncidentStore((s) => s.addMapAnnotation);
   const removeMapAnnotation = useIncidentStore((s) => s.removeMapAnnotation);
+  const removeSupplyRoute = useIncidentStore((s) => s.removeSupplyRoute);
 
   const mapRef = useRef<MapCanvasHandle>(null);
   const routePlannerRef = useRef<MapRoutePlannerHandle>(null);
@@ -46,7 +49,14 @@ export function EventMapView() {
   const [polygonVerts, setPolygonVerts] = useState(0);
   const [circleCenterSet, setCircleCenterSet] = useState(false);
   const [circleRadiusMeters, setCircleRadiusMeters] = useState(500);
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [canSaveRoute, setCanSaveRoute] = useState(false);
   const { theme: basemapTheme, toggleTheme: toggleBasemapTheme } = useMapBasemapTheme();
+
+  const selectedRoute = useMemo(
+    () => supplyRoutes.find((r) => r.id === selectedRouteId) ?? null,
+    [supplyRoutes, selectedRouteId],
+  );
 
   const center = useMemo((): [number, number] | null => {
     if (situation.lat == null || situation.lng == null) return null;
@@ -59,20 +69,30 @@ export function EventMapView() {
   );
 
   const routeOverlays = useMemo(() => {
-    const lines = routesToFeatureCollection(supplyRoutes, {
-      draftVariants: draftVariants.length > 0 ? draftVariants : undefined,
-      previewVariantId,
+    const savedLines = routesToFeatureCollection(supplyRoutes, {
+      focusedRouteId: selectedRouteId,
     });
-    const markers = waypointMarkersCollection(
+    const draftLines =
+      tool === "route" && draftVariants.length > 0
+        ? routesToFeatureCollection([], {
+            draftVariants,
+            previewVariantId,
+          })
+        : emptyFeatureCollection();
+    const savedMarkers = supplyRoutesWaypointMarkers(supplyRoutes, {
+      highlightRouteId: selectedRouteId,
+    });
+    const plannerMarkers = waypointMarkersCollection(
       tool === "route" ? routeOrigin : null,
       tool === "route" ? routeDestination : null,
       tool === "route" ? routeVia : [],
     );
-    return mergeFeatureCollections(lines, markers);
+    return mergeFeatureCollections(savedLines, draftLines, savedMarkers, plannerMarkers);
   }, [
     supplyRoutes,
     draftVariants,
     previewVariantId,
+    selectedRouteId,
     tool,
     routeOrigin,
     routeDestination,
@@ -87,8 +107,20 @@ export function EventMapView() {
   const drawMode: MapDrawMode =
     tool === "polygon" ? "polygon" : tool === "circle" ? "circle" : "none";
 
+  const clearRouteDrafts = useCallback(() => {
+    setDraftVariants([]);
+    setPreviewVariantId(null);
+    setRouteOrigin(null);
+    setRouteDestination(null);
+    setRouteVia([]);
+  }, []);
+
   const selectTool = (next: MapTool) => {
     mapRef.current?.cancelDraw();
+    if (tool === "route" && next !== "route") {
+      clearRouteDrafts();
+      setCanSaveRoute(false);
+    }
     setTool(next);
     setRoutePickMode("none");
     setPolygonVerts(0);
@@ -147,6 +179,37 @@ export function EventMapView() {
     });
   }, []);
 
+  const focusSavedRoute = useCallback((routeId: string) => {
+    const route = supplyRoutes.find((r) => r.id === routeId);
+    if (!route) return;
+    setSelectedRouteId(routeId);
+    const variant =
+      route.variants.find((v) => v.id === route.selectedVariantId) ?? route.variants[0];
+    if (variant) handleVariantFocus(variant);
+  }, [supplyRoutes, handleVariantFocus]);
+
+  const handleRouteLineClick = useCallback(
+    (payload: { routeId?: string; variantId: string }) => {
+      if (payload.routeId) {
+        focusSavedRoute(payload.routeId);
+        return;
+      }
+      const match = supplyRoutes.find((r) =>
+        r.variants.some((v) => v.id === payload.variantId),
+      );
+      if (match) focusSavedRoute(match.id);
+    },
+    [focusSavedRoute, supplyRoutes],
+  );
+
+  const handleRouteSaved = useCallback(
+    (routeId: string) => {
+      clearRouteDrafts();
+      focusSavedRoute(routeId);
+    },
+    [clearRouteDrafts, focusSavedRoute],
+  );
+
   const handleMapClick = useCallback(
     (lng: number, lat: number) => {
       if (tool === "route" && routePickMode !== "none") {
@@ -189,10 +252,33 @@ export function EventMapView() {
       />
 
       <div className="ic-map-view__body">
-        {mapAnnotations.length > 0 ? (
-          <aside className="ic-map-layers" aria-label="Saved map shapes">
+        {mapAnnotations.length > 0 || supplyRoutes.length > 0 ? (
+          <aside className="ic-map-layers" aria-label="Map layers">
             <h3 className="ic-map-layers__title">Layers</h3>
             <ul className="ic-map-layers__list">
+              {supplyRoutes.map((r) => (
+                <li key={r.id}>
+                  <button
+                    type="button"
+                    className={`ic-map-layers__name ic-map-layers__name--btn${selectedRouteId === r.id ? " ic-map-layers__name--active" : ""}`}
+                    onClick={() => focusSavedRoute(r.id)}
+                  >
+                    {r.name}
+                  </button>
+                  <span className="ic-map-layers__meta">route</span>
+                  <button
+                    type="button"
+                    className="ic-map-layers__remove"
+                    aria-label={`Remove ${r.name}`}
+                    onClick={() => {
+                      removeSupplyRoute(r.id);
+                      if (selectedRouteId === r.id) setSelectedRouteId(null);
+                    }}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
               {mapAnnotations.map((a) => (
                 <li key={a.id}>
                   <span className="ic-map-layers__name">{a.name}</span>
@@ -231,12 +317,36 @@ export function EventMapView() {
           }}
           onDrawComplete={saveDrawResult}
           onMapClick={tool === "location" || tool === "route" ? handleMapClick : undefined}
+          onRouteLineClick={handleRouteLineClick}
         />
+
+        {selectedRoute && tool !== "route" ? (
+          <MapRouteInfoPanel
+            route={selectedRoute}
+            onClose={() => setSelectedRouteId(null)}
+            onDelete={() => {
+              removeSupplyRoute(selectedRoute.id);
+              setSelectedRouteId(null);
+            }}
+            onEdit={() => {
+              setSelectedRouteId(null);
+              setTool("route");
+              requestAnimationFrame(() => routePlannerRef.current?.loadRoute(selectedRoute));
+            }}
+          />
+        ) : null}
 
         <MapRouteFloatingPanel
           open={tool === "route"}
           title="Route planner"
           onClose={() => selectTool("none")}
+          onSave={() => routePlannerRef.current?.saveRoute()}
+          saveDisabled={!canSaveRoute}
+          saveHint={
+            canSaveRoute
+              ? "Save this route on the map"
+              : "Set start and end, then calculate routes before saving"
+          }
         >
           <MapRoutePlanner
             ref={routePlannerRef}
@@ -247,6 +357,8 @@ export function EventMapView() {
             onWaypointsChange={handleWaypointsChange}
             onRoutesCalculated={handleRoutesCalculated}
             onVariantFocus={handleVariantFocus}
+            onRouteSaved={handleRouteSaved}
+            onCanSaveChange={setCanSaveRoute}
           />
         </MapRouteFloatingPanel>
       </div>

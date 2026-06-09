@@ -44,6 +44,42 @@
   border-bottom: none;
 }
 
+/* PDF export clone (off-screen); values rendered as static blocks */
+.fema-ics-form--pdf-export .fema-ics-form__pdf-value {
+  font-size: 10pt;
+  line-height: 1.25;
+}
+
+/* One letter-size sheet per logical page (or overflow chunk) */
+.fema-ics-form__pdf-sheet {
+  box-sizing: border-box;
+  overflow: hidden;
+  break-inside: avoid;
+  page-break-after: always;
+}
+
+.fema-ics-form__pdf-sheet .fema-ics-form__page {
+  border-bottom: none;
+  padding-bottom: 8px;
+}
+
+.fema-ics-form__pdf-sheet .fema-ics-form__page-footer {
+  margin-top: auto;
+}
+
+.fema-ics-form--pdf-export .fema-ics-form__row,
+.fema-ics-form--pdf-export .fema-ics-form__field,
+.fema-ics-form--pdf-export .fema-ics-form__prepared,
+.fema-ics-form--pdf-export .fema-ics-form__block-title,
+.fema-ics-form--pdf-export .fema-ics-form__table-wrap,
+.fema-ics-form--pdf-export .fema-ics-form__org-grid,
+.fema-ics-form--pdf-export .fema-ics-form__checkboxes,
+.fema-ics-form--pdf-export .fema-ics-form__page-footer,
+.fema-ics-form--pdf-export .fema-ics-form__pdf-table-chunk {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
 .fema-ics-form__page-footer {
   display: flex;
   justify-content: space-between;

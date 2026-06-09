@@ -70,12 +70,17 @@ export type RoleGroup = {
   roles: RoleRow[];
 };
 
+export type ActivityLogKind = "user" | "ui" | "navigation" | "data" | "system";
+
 export type LogEntry = {
   id: string;
   message: string;
   tags: string[];
   author: string;
   createdAt: string;
+  kind?: ActivityLogKind;
+  target?: string;
+  detail?: string;
 };
 
 export type AuditEntry = {
@@ -93,6 +98,10 @@ export type IcsFormRecord = {
   officialTitle: string;
   formType: string;
   modifiedAt: string;
+  /** Last explicit save (ICS structured payload + metadata). */
+  savedAt: string | null;
+  /** Display name of the person who last saved the form. */
+  filledBy: string | null;
   folderId: string | null;
   content: string;
   status: "draft" | "published";

@@ -1,31 +1,24 @@
 ﻿"use client";
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
-import { ElectricityWidget } from "@/components/dashboard/ElectricityWidget";
-import { MetricGroup } from "@/components/dashboard/MetricGroup";
-import { WidgetCard } from "@/components/dashboard/WidgetCard";
-import { IconCalendar, IconList, IconMap, IconUsers } from "@/components/dashboard/icons";
+import { IconCalendar, IconList, IconMap } from "@/components/dashboard/icons";
 import { useEventId } from "@/context/EventContext";
 import { moduleHref } from "@/lib/navigation/modules";
-import { FEMA_ICS_FORMS_INDEX_URL } from "@/lib/incident/ics-forms-catalog";
-import { formatEventRange } from "@/lib/incident/calendar-utils";
-import { annotationsToFeatureCollection } from "@/lib/maps/map-annotations";
 import { downloadIncidentExport } from "@/lib/incident/export";
-import { dashboardStats } from "@/lib/incident/stats";
 import { sortResidentAreas, type ResidentAreaSortMode } from "@/lib/incident/residents";
 import { sortUtilityRows, type UtilitySortMode } from "@/lib/incident/utilities";
 import { CENSUS_SOURCE, CENSUS_YEAR, formatPopulation } from "@/lib/sa-population";
 import { residentAreaPatchFromCensus, tryAutofillResidentAreaFromCity } from "@/lib/sa-population/resident-area";
 import type { ResidentArea } from "@/lib/incident/types";
 import { CensusCityField } from "./CensusCityField";
-import { ResidentsWidget } from "@/components/dashboard/ResidentsWidget";
 import { useIncidentStore } from "@/context/EventContext";
 import type {
   ActivationLevel,
+  AuditEntry,
   DamageStatus,
+  LogEntry,
   ResourceRequestStatus,
   RoadStatus,
   ShelterStatus,
@@ -41,16 +34,11 @@ import {
   StatusFilterBar,
   useSearchFilter,
 } from "./shared";
-import { FormsAddMenu } from "./FormsAddMenu";
-import { IcsFormEditor } from "./IcsFormEditor";
 import { EmptyHint, StatusBar, SummaryBar } from "./ui";
 
-import { EventMapView } from "@/components/map/EventMapView";
-
-const MapCanvasLazy = dynamic(() => import("@/components/map/MapCanvas"), {
-  ssr: false,
-  loading: () => <p className="ic-empty-hint">Loading mapâ€¦</p>,
-});
+export { DashboardHomeView } from "./view-modules/dashboard";
+export { FormsView } from "./view-modules/forms";
+export { MapView } from "./view-modules/map";
 
 type ViewProps = {
   searchActive?: boolean;
@@ -92,201 +80,44 @@ function SearchBar({
   );
 }
 
-const ICS_WORKSPACES = [
-  { id: "command", label: "Command", slugs: ["", "situation", "briefings", "roles"] },
-  { id: "planning", label: "Planning", slugs: ["calendar", "forms", "map"] },
-  { id: "operations", label: "Operations", slugs: ["tasks", "status-boards", "plays", "logs"] },
-  { id: "logistics", label: "Logistics", slugs: ["resource-requests", "shelters", "personnel"] },
-] as const;
-
-export function DashboardHomeView() {
-  const eventId = useEventId();
-  const state = useIncidentStore((s) => s);
-  const [workspace, setWorkspace] = useState<string>("command");
-  const stats = dashboardStats(state);
-  const ws = ICS_WORKSPACES.find((w) => w.id === workspace) ?? ICS_WORKSPACES[0];
-  const mapCenter =
-    state.situation.lat != null && state.situation.lng != null
-      ? ([state.situation.lng, state.situation.lat] as [number, number])
-      : null;
-
-  return (
-    <div className="ic-dashboard">
-      <header className="ic-dashboard-header">
-        <h1 className="ic-main__title">Command overview</h1>
-        <p className="ic-dashboard-header__sub">
-          D4H-style control room — switch ICS workspace, then open modules from the sidebar.
-        </p>
-        <nav className="ic-workspace-tabs" aria-label="ICS workspace">
-          {ICS_WORKSPACES.map((w) => (
-            <button
-              key={w.id}
-              type="button"
-              className={workspace === w.id ? "ic-workspace-tabs__active" : ""}
-              onClick={() => setWorkspace(w.id)}
-            >
-              {w.label}
-            </button>
-          ))}
-        </nav>
-        <p className="ic-workspace-quicklinks">
-          {ws.slugs.map((slug) => {
-            const label =
-              slug === ""
-                ? "Dashboard"
-                : slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-            return (
-              <Link key={slug || "home"} href={moduleHref(eventId, slug)} className="ic-workspace-link">
-                {label}
-              </Link>
-            );
-          })}
-        </p>
-      </header>
-      <section className="ic-grid" aria-label="Dashboard widgets">
-        <WidgetCard title="Log" icon={<IconList />} className="ic-grid__log">
-          {stats.logPreview.length === 0 ? (
-            <p className="ic-empty-hint">There are no events to display.</p>
-          ) : (
-            <ul className="ic-log-preview">
-              {stats.logPreview.map((e) => (
-                <li key={e.id}>
-                  <strong>{e.author}</strong> {e.message}
-                </li>
-              ))}
-            </ul>
-          )}
-        </WidgetCard>
-        <WidgetCard title="Map" icon={<IconMap />} className="ic-grid__map">
-          <MapCanvasLazy
-            center={mapCenter}
-            zoom={10}
-            incidentMarker={mapCenter}
-            overlays={annotationsToFeatureCollection(state.mapAnnotations)}
-          />
-        </WidgetCard>
-        <WidgetCard title="Personnel" icon={<IconUsers />} className="ic-grid__personnel">
-          <MetricGroup
-            items={[
-              { value: stats.personnelTotal, label: "Total count" },
-              { value: stats.personnelOnline, label: "Online now" },
-            ]}
-          />
-        </WidgetCard>
-        <WidgetCard title="Damage Assessment" icon={<IconList />}>
-          <MetricGroup
-            items={[
-              { value: stats.minorDamage, label: "Minor Damage" },
-              { value: stats.severeDamage, label: "Severe Damage" },
-            ]}
-          />
-        </WidgetCard>
-        <WidgetCard title="Utilities-Electricity" icon={<IconList />}>
-          <ElectricityWidget
-            customersWithoutPower={stats.electricityOutages}
-            utilities={state.utilities}
-            lat={state.situation.lat}
-            lng={state.situation.lng}
-          />
-        </WidgetCard>
-        <WidgetCard title="Residents" icon={<IconList />}>
-          <ResidentsWidget
-            areas={state.residentAreas}
-            individualsCount={stats.residentsTotal}
-          />
-        </WidgetCard>
-        <WidgetCard title="Road Damages" icon={<IconList />}>
-          <MetricGroup
-            items={[
-              { value: stats.roadClosed, label: "Closed" },
-              { value: stats.roadOneLane, label: "One lane" },
-              { value: stats.roadOpen, label: "Open" },
-            ]}
-          />
-        </WidgetCard>
-        <WidgetCard title="Shelters" icon={<IconList />}>
-          <MetricGroup items={[{ value: stats.sheltersTotal, label: "Total count" }]} />
-        </WidgetCard>
-        <WidgetCard title="All Tasks" icon={<IconList />}>
-          <MetricGroup
-            items={[
-              { value: stats.taskCounts.canceled, label: "Canceled" },
-              { value: stats.taskCounts.complete, label: "Complete" },
-              { value: stats.taskCounts.in_progress, label: "In Progress" },
-              { value: stats.taskCounts.not_started, label: "Not Started" },
-            ]}
-          />
-        </WidgetCard>
-        <WidgetCard title="Resource Requests" icon={<IconList />}>
-          <MetricGroup
-            items={[
-              { value: stats.resourceRequests.ready, label: "Ready" },
-              { value: stats.resourceRequests.enroute, label: "Enroute" },
-              { value: stats.resourceRequests.assigned, label: "Assigned" },
-              { value: stats.resourceRequests.requested, label: "Requested" },
-            ]}
-          />
-        </WidgetCard>
-        <WidgetCard title="My Tasks" icon={<IconList />}>
-          <MetricGroup
-            items={[
-              { value: stats.taskCounts.canceled, label: "Canceled" },
-              { value: stats.taskCounts.complete, label: "Complete" },
-              { value: stats.taskCounts.in_progress, label: "In Progress" },
-              { value: stats.taskCounts.not_started, label: "Not Started" },
-            ]}
-          />
-        </WidgetCard>
-        <WidgetCard title="Calendar" icon={<IconCalendar />} className="ic-grid__calendar">
-          {stats.upcomingEvents.length === 0 ? (
-            <p className="ic-empty-hint">
-              No upcoming events.{" "}
-              <Link href={moduleHref(eventId, "calendar")} className="ic-accent-link">
-                Open calendar
-              </Link>
-            </p>
-          ) : (
-            <ul className="ic-cal-widget-list">
-              {stats.upcomingEvents.map((e) => (
-                <li key={e.id}>
-                  <strong>{e.title}</strong>
-                  <span>{formatEventRange(e.startAt, e.endAt, e.allDay)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="ic-widget__sub">
-            {stats.operationalPeriodCount} operational period
-            {stats.operationalPeriodCount === 1 ? "" : "s"}
-          </p>
-        </WidgetCard>
-      </section>
-    </div>
-  );
-}
+const ACTIVATION_LEVELS: {
+  value: ActivationLevel;
+  label: string;
+  hint: string;
+}[] = [
+  { value: "planning", label: "Planning", hint: "Preparing response" },
+  { value: "activated", label: "Activated", hint: "Full command posture" },
+  { value: "closed", label: "Closed", hint: "Demobilized / complete" },
+];
 
 export function SituationView() {
+  const eventId = useEventId();
   const situation = useIncidentStore((s) => s.situation);
   const updateSituation = useIncidentStore((s) => s.updateSituation);
   const setActivationLevel = useIncidentStore((s) => s.setActivationLevel);
 
-  const levels: { value: ActivationLevel; label: string }[] = [
-    { value: "planning", label: "Planning" },
-    { value: "activated", label: "Activated" },
-    { value: "closed", label: "Closed" },
-  ];
+  const activeLevel =
+    ACTIVATION_LEVELS.find((l) => l.value === situation.activationLevel) ??
+    ACTIVATION_LEVELS[0];
+  const hasCoords = situation.lat != null && situation.lng != null;
 
   return (
     <section className="ic-situation">
-      <header className="ic-situation-header">
-        <div className="ic-situation-header__intro">
-          <h2 className="ic-situation-header__title">Situation</h2>
-          <p className="ic-situation-header__sub">
-            Event identity, dates, location, and operational summary
+      <header className="ic-situation-hero">
+        <div className="ic-situation-hero__main">
+          <p className="ic-situation-hero__eyebrow">ICS · Command</p>
+          <h2 className="ic-situation-hero__title">Situation</h2>
+          <p className="ic-situation-hero__sub">
+            Event identity, operational period, map location, and command narrative.
           </p>
+          <span
+            className={`ic-situation-status ic-situation-status--${situation.activationLevel}`}
+          >
+            {activeLevel.label}
+          </span>
         </div>
         <nav className="ic-activation-bar" aria-label="Activation level">
-          {levels.map((l) => (
+          {ACTIVATION_LEVELS.map((l) => (
             <button
               key={l.value}
               type="button"
@@ -295,103 +126,162 @@ export function SituationView() {
               }`}
               onClick={() => setActivationLevel(l.value)}
               aria-pressed={situation.activationLevel === l.value}
+              title={l.hint}
             >
-              {l.label}
+              <span className="ic-activation-bar__label">{l.label}</span>
+              <span className="ic-activation-bar__hint">{l.hint}</span>
             </button>
           ))}
         </nav>
       </header>
-      <form
-        className="ic-situation__form"
-        onSubmit={(e) => e.preventDefault()}
-      >
-        <label className="ic-field">
-          <span>Incident Name</span>
-          <input
-            type="text"
-            value={situation.name}
-            onChange={(e) => updateSituation({ name: e.target.value })}
-          />
-        </label>
-        <label className="ic-field">
-          <span>Start Date</span>
-          <input
-            type="datetime-local"
-            value={situation.startDate}
-            onChange={(e) => updateSituation({ startDate: e.target.value })}
-          />
-        </label>
-        <label className="ic-field">
-          <span>End Date</span>
-          <input
-            type="datetime-local"
-            value={situation.endDate}
-            onChange={(e) => updateSituation({ endDate: e.target.value })}
-          />
-        </label>
-        <label className="ic-field ic-field--full">
-          <span>Location</span>
-          <input
-            type="text"
-            placeholder="Address or place name"
-            value={situation.location}
-            onChange={(e) => updateSituation({ location: e.target.value })}
-          />
-        </label>
-        <label className="ic-field">
-          <span>Latitude</span>
-          <input
-            type="number"
-            step="any"
-            placeholder="e.g. 40.7128"
-            value={situation.lat ?? ""}
-            onChange={(e) =>
-              updateSituation({
-                lat: e.target.value === "" ? null : Number(e.target.value),
-              })
-            }
-          />
-        </label>
-        <label className="ic-field">
-          <span>Longitude</span>
-          <input
-            type="number"
-            step="any"
-            placeholder="e.g. -74.0060"
-            value={situation.lng ?? ""}
-            onChange={(e) =>
-              updateSituation({
-                lng: e.target.value === "" ? null : Number(e.target.value),
-              })
-            }
-          />
-        </label>
-        <label className="ic-field ic-field--full">
-          <span>Situation Summary</span>
-          <textarea
-            rows={5}
-            value={situation.summary}
-            onChange={(e) => updateSituation({ summary: e.target.value })}
-          />
-        </label>
-        <label className="ic-field ic-field--full">
-          <span>Current and Planned Objectives</span>
-          <textarea
-            rows={5}
-            value={situation.objectives}
-            onChange={(e) => updateSituation({ objectives: e.target.value })}
-          />
-        </label>
-        <label className="ic-field ic-field--full">
-          <span>Key contacts (agencies, liaisons)</span>
-          <textarea
-            rows={4}
-            placeholder="Name â€” role â€” phone / email"
-            value={situation.keyContacts ?? ""}
-            onChange={(e) => updateSituation({ keyContacts: e.target.value })}
-          />
-        </label>
-      </form>
+
+      <div className="ic-situation__body">
+        <form className="ic-situation__grid" onSubmit={(e) => e.preventDefault()}>
+          <article className="ic-situation-card ic-situation-card--identity">
+            <header className="ic-situation-card__head">
+              <span className="ic-situation-card__icon" aria-hidden>
+                <IconList />
+              </span>
+              <div>
+                <h3 className="ic-situation-card__title">Event identity</h3>
+                <p className="ic-situation-card__desc">Name and operational period</p>
+              </div>
+            </header>
+            <div className="ic-situation-card__fields">
+              <label className="ic-field ic-field--full">
+                <span>Incident name</span>
+                <input
+                  type="text"
+                  value={situation.name}
+                  onChange={(e) => updateSituation({ name: e.target.value })}
+                />
+              </label>
+              <label className="ic-field">
+                <span>Start date</span>
+                <input
+                  type="datetime-local"
+                  value={situation.startDate}
+                  onChange={(e) => updateSituation({ startDate: e.target.value })}
+                />
+              </label>
+              <label className="ic-field">
+                <span>End date</span>
+                <input
+                  type="datetime-local"
+                  value={situation.endDate}
+                  onChange={(e) => updateSituation({ endDate: e.target.value })}
+                />
+              </label>
+            </div>
+          </article>
+
+          <article className="ic-situation-card ic-situation-card--location">
+            <header className="ic-situation-card__head">
+              <span className="ic-situation-card__icon ic-situation-card__icon--map" aria-hidden>
+                <IconMap />
+              </span>
+              <div>
+                <h3 className="ic-situation-card__title">Location</h3>
+                <p className="ic-situation-card__desc">Address and map coordinates</p>
+              </div>
+            </header>
+            <div className="ic-situation-card__fields">
+              <label className="ic-field ic-field--full">
+                <span>Location</span>
+                <input
+                  type="text"
+                  placeholder="Address or place name"
+                  value={situation.location}
+                  onChange={(e) => updateSituation({ location: e.target.value })}
+                />
+              </label>
+              <label className="ic-field">
+                <span>Latitude</span>
+                <input
+                  type="number"
+                  step="any"
+                  placeholder="e.g. -25.7479"
+                  value={situation.lat ?? ""}
+                  onChange={(e) =>
+                    updateSituation({
+                      lat: e.target.value === "" ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </label>
+              <label className="ic-field">
+                <span>Longitude</span>
+                <input
+                  type="number"
+                  step="any"
+                  placeholder="e.g. 28.2293"
+                  value={situation.lng ?? ""}
+                  onChange={(e) =>
+                    updateSituation({
+                      lng: e.target.value === "" ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </label>
+              <div className="ic-situation-card__footer">
+                {hasCoords ? (
+                  <p className="ic-situation-coords">
+                    Map pin: {situation.lat!.toFixed(5)}, {situation.lng!.toFixed(5)}
+                  </p>
+                ) : (
+                  <p className="ic-situation-coords ic-situation-coords--empty">
+                    No map coordinates yet
+                  </p>
+                )}
+                <Link href={moduleHref(eventId, "map")} className="ic-situation-map-link">
+                  Set on map →
+                </Link>
+              </div>
+            </div>
+          </article>
+
+          <article className="ic-situation-card ic-situation-card--narrative">
+            <header className="ic-situation-card__head">
+              <span className="ic-situation-card__icon ic-situation-card__icon--narrative" aria-hidden>
+                <IconCalendar />
+              </span>
+              <div>
+                <h3 className="ic-situation-card__title">Operational picture</h3>
+                <p className="ic-situation-card__desc">Summary, objectives, and key contacts</p>
+              </div>
+            </header>
+            <div className="ic-situation-card__fields ic-situation-card__fields--stack">
+              <label className="ic-field ic-field--full">
+                <span>Situation summary</span>
+                <textarea
+                  rows={5}
+                  placeholder="Current conditions, impacts, and immediate concerns…"
+                  value={situation.summary}
+                  onChange={(e) => updateSituation({ summary: e.target.value })}
+                />
+              </label>
+              <label className="ic-field ic-field--full">
+                <span>Current and planned objectives</span>
+                <textarea
+                  rows={5}
+                  placeholder="Operational objectives for this period…"
+                  value={situation.objectives}
+                  onChange={(e) => updateSituation({ objectives: e.target.value })}
+                />
+              </label>
+              <label className="ic-field ic-field--full">
+                <span>Key contacts</span>
+                <textarea
+                  rows={4}
+                  placeholder="Name — role — phone / email"
+                  value={situation.keyContacts ?? ""}
+                  onChange={(e) => updateSituation({ keyContacts: e.target.value })}
+                />
+              </label>
+            </div>
+          </article>
+        </form>
+      </div>
     </section>
   );
 }
@@ -502,145 +392,52 @@ export function RolesView({ searchActive, orgChartOpen }: ViewProps) {
   );
 }
 
-export function FormsView() {
-  const forms = useIncidentStore((s) => s.forms);
-  const addForm = useIncidentStore((s) => s.addForm);
-  const updateForm = useIncidentStore((s) => s.updateForm);
-  const removeForm = useIncidentStore((s) => s.removeForm);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = forms.find((f) => f.id === selectedId) ?? null;
+type ActivityFilter = "all" | "ui" | "data" | "navigation" | "user" | "audit";
 
-  const handleAddForm = (templateId: string) => {
-    const id = addForm(templateId);
-    if (id) setSelectedId(id);
-  };
-
-  return (
-    <section className="ic-forms-layout">
-      <header className="ic-forms-header">
-        <a
-          href={FEMA_ICS_FORMS_INDEX_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ic-forms-header__link"
-        >
-          Official FEMA ICS forms â†—
-        </a>
-        <div className="ic-forms-add">
-          <button type="button" className="ic-btn-add" onClick={() => setMenuOpen(true)}>
-            + Add ICS form â–¾
-          </button>
-          <FormsAddMenu
-            open={menuOpen}
-            onClose={() => setMenuOpen(false)}
-            onSelect={handleAddForm}
-          />
-        </div>
-      </header>
-      <div className="ic-forms-split">
-        <section className="ic-table-wrap">
-          <table className="ic-table ic-table--clickable">
-            <thead>
-              <tr>
-                <th>Form</th>
-                <th>IAP</th>
-                <th>Status</th>
-                <th>Modified</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {forms.map((f) => (
-                <tr
-                  key={f.id}
-                  className={selectedId === f.id ? "ic-table__row--selected" : ""}
-                  onClick={() => setSelectedId(f.id)}
-                >
-                  <td>
-                    <span className="ic-form-name">{f.name}</span>
-                    {f.formNumber ? (
-                      <span className="ic-form-number">ICS {f.formNumber}</span>
-                    ) : null}
-                  </td>
-                  <td>{f.inIap ? "Yes" : "â€”"}</td>
-                  <td>{f.status ?? "draft"}</td>
-                  <td>{formatDate(f.modifiedAt)}</td>
-                  <td onClick={(e) => e.stopPropagation()}>
-                    <RowDelete
-                      onClick={() => {
-                        removeForm(f.id);
-                        if (selectedId === f.id) setSelectedId(null);
-                      }}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {forms.length === 0 ? <p className="ic-table-empty">No forms yet.</p> : null}
-        </section>
-        {selected ? (
-          <aside className="ic-form-editor ic-form-editor--fema">
-            <header className="ic-form-editor__head">
-              <div>
-                <h3>{selected.name}</h3>
-                {selected.officialTitle ? (
-                  <p className="ic-form-editor__subtitle">{selected.officialTitle}</p>
-                ) : null}
-              </div>
-              {selected.pdfUrl ? (
-                <a
-                  href={selected.pdfUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ic-btn-secondary ic-btn-secondary--sm"
-                >
-                  Official PDF â†—
-                </a>
-              ) : null}
-            </header>
-            <label className="ic-field">
-              <span>Status</span>
-              <select
-                value={selected.status ?? "draft"}
-                onChange={(e) =>
-                  updateForm(selected.id, {
-                    status: e.target.value as "draft" | "published",
-                  })
-                }
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-              </select>
-            </label>
-            <IcsFormEditor
-              form={selected}
-              onChange={(patch) => updateForm(selected.id, patch)}
-            />
-          </aside>
-        ) : (
-          <aside className="ic-form-editor ic-form-editor--empty">
-            <p className="ic-empty-hint">Select a form to edit.</p>
-          </aside>
-        )}
-      </div>
-    </section>
-  );
-}
-
-export function MapView() {
-  return <EventMapView />;
-}
+type TimelineRow =
+  | { id: string; sortAt: string; source: "log"; entry: LogEntry }
+  | { id: string; sortAt: string; source: "audit"; entry: AuditEntry };
 
 export function LogsView() {
   const logs = useIncidentStore((s) => s.logs);
   const audit = useIncidentStore((s) => s.audit);
   const addLog = useIncidentStore((s) => s.addLog);
-  const [tab, setTab] = useState<"log" | "audit">("log");
+  const [filter, setFilter] = useState<ActivityFilter>("all");
   const [message, setMessage] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+
+  const timeline = useMemo(() => {
+    const rows: TimelineRow[] = [
+      ...logs.map((entry) => ({
+        id: `log-${entry.id}`,
+        sortAt: entry.createdAt,
+        source: "log" as const,
+        entry,
+      })),
+      ...audit.map((entry) => ({
+        id: `audit-${entry.id}`,
+        sortAt: entry.createdAt,
+        source: "audit" as const,
+        entry,
+      })),
+    ];
+    rows.sort((a, b) => b.sortAt.localeCompare(a.sortAt));
+    return rows;
+  }, [logs, audit]);
+
+  const filtered = useMemo(() => {
+    if (filter === "all") return timeline;
+    if (filter === "audit") return timeline.filter((r) => r.source === "audit");
+    if (filter === "user") {
+      return timeline.filter(
+        (r) => r.source === "log" && (r.entry.kind === "user" || r.entry.tags.includes("user")),
+      );
+    }
+    return timeline.filter(
+      (r) => r.source === "log" && (r.entry.kind === filter || r.entry.tags.includes(filter)),
+    );
+  }, [timeline, filter]);
 
   const submit = () => {
     if (!message.trim()) return;
@@ -657,92 +454,124 @@ export function LogsView() {
     setTagInput("");
   };
 
-  const entries = tab === "log" ? logs : audit;
-
   return (
     <section className="ic-logs">
-      <nav className="ic-tabs">
-        <button
-          type="button"
-          className={tab === "log" ? "ic-tabs__active" : ""}
-          onClick={() => setTab("log")}
-        >
-          Log
-        </button>
-        <button
-          type="button"
-          className={tab === "audit" ? "ic-tabs__active" : ""}
-          onClick={() => setTab("audit")}
-        >
-          Audit
-        </button>
+      <header className="ic-logs__header">
+        <div>
+          <h2 className="ic-logs__title">Activity log</h2>
+          <p className="ic-logs__sub">
+            Every click, field change, navigation, and data update is recorded automatically.
+          </p>
+        </div>
+        <span className="ic-logs__count">{timeline.length} events</span>
+      </header>
+
+      <nav className="ic-logs__filters" aria-label="Filter activity">
+        {(
+          [
+            ["all", "All"],
+            ["ui", "UI"],
+            ["data", "Data"],
+            ["navigation", "Navigation"],
+            ["user", "Manual"],
+            ["audit", "Audit"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            className={filter === id ? "ic-logs__filter ic-logs__filter--active" : "ic-logs__filter"}
+            onClick={() => setFilter(id)}
+          >
+            {label}
+          </button>
+        ))}
       </nav>
-      {entries.length === 0 ? (
+
+      {filtered.length === 0 ? (
         <p className="ic-empty-hint ic-logs__empty">There are no events to display.</p>
       ) : (
-        <ul className="ic-log-list">
-          {entries.map((e) => (
-            <li key={e.id} className="ic-log-list__item">
-              <time>{formatDate(e.createdAt)}</time>
-              {"author" in e ? (
-                <span>
-                  <strong>{e.author}</strong> {e.message}
-                  {e.tags?.length ? (
+        <ul className="ic-log-list ic-log-list--activity">
+          {filtered.map((row) =>
+            row.source === "log" ? (
+              <li
+                key={row.id}
+                className={`ic-log-list__item ic-log-list__item--${row.entry.kind ?? "system"}`}
+              >
+                <time>{formatDate(row.entry.createdAt)}</time>
+                <div className="ic-log-list__body">
+                  <p className="ic-log-list__line">
+                    <strong>{row.entry.author}</strong> {row.entry.message}
+                    {row.entry.target ? (
+                      <span className="ic-log-list__target"> → {row.entry.target}</span>
+                    ) : null}
+                  </p>
+                  {row.entry.detail ? (
+                    <p className="ic-log-list__detail">{row.entry.detail}</p>
+                  ) : null}
+                  {row.entry.tags?.length ? (
                     <span className="ic-log-tags">
-                      {e.tags.map((t) => (
+                      {row.entry.tags.map((t) => (
                         <span key={t} className="ic-log-tag">
                           {t}
                         </span>
                       ))}
                     </span>
                   ) : null}
-                </span>
-              ) : (
-                <span>
-                  <strong>{e.actor}</strong> {e.action}
-                </span>
-              )}
-            </li>
-          ))}
+                </div>
+              </li>
+            ) : (
+              <li key={row.id} className="ic-log-list__item ic-log-list__item--audit">
+                <time>{formatDate(row.entry.createdAt)}</time>
+                <div className="ic-log-list__body">
+                  <p className="ic-log-list__line">
+                    <strong>{row.entry.actor}</strong> {row.entry.action}
+                  </p>
+                  <span className="ic-log-tags">
+                    <span className="ic-log-tag">audit</span>
+                  </span>
+                </div>
+              </li>
+            ),
+          )}
         </ul>
       )}
-      {tab === "log" ? (
-        <footer className="ic-log-composer">
-          {tags.length > 0 ? (
-            <div className="ic-log-composer__tags">
-              {tags.map((t) => (
-                <span key={t} className="ic-log-tag">
-                  {t}
-                  <button type="button" onClick={() => setTags(tags.filter((x) => x !== t))}>
-                    Ã—
-                  </button>
-                </span>
-              ))}
-            </div>
-          ) : null}
-          <input
-            type="text"
-            placeholder="Message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submit()}
-          />
-          <input
-            type="text"
-            className="ic-log-composer__tag-input"
-            placeholder="Tag"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
-          />
-          <button type="button" className="ic-link-btn" onClick={addTag}>
-            + Tag
-          </button>
-          <button type="button" aria-label="Send" onClick={submit}>
-            âž¤
-          </button>
-        </footer>
-      ) : null}
+
+      <footer className="ic-log-composer">
+        {tags.length > 0 ? (
+          <div className="ic-log-composer__tags">
+            {tags.map((t) => (
+              <span key={t} className="ic-log-tag">
+                {t}
+                <button type="button" onClick={() => setTags(tags.filter((x) => x !== t))}>
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+        <input
+          type="text"
+          placeholder="Add a manual log entry…"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submit()}
+        />
+        <input
+          type="text"
+          className="ic-log-composer__tag-input"
+          placeholder="Tag"
+          value={tagInput}
+          onChange={(e) => setTagInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+        />
+        <button type="button" className="ic-link-btn" onClick={addTag}>
+          + Tag
+        </button>
+        <button type="button" aria-label="Send" onClick={submit}>
+          →
+        </button>
+      </footer>
     </section>
   );
 }

@@ -39,7 +39,8 @@ function variantToLineFeature(
   previewVariantId: string | null | undefined,
   extra?: Record<string, unknown>,
 ): Feature<LineString> {
-  const hasFocus = previewVariantId != null;
+  const dimmed = Boolean(extra?.dimmed);
+  const hasFocus = !dimmed && previewVariantId != null;
   const highlighted = hasFocus && variant.id === previewVariantId;
   const color =
     ROUTE_ALT_COLORS[index % ROUTE_ALT_COLORS.length] ??
@@ -53,8 +54,8 @@ function variantToLineFeature(
       scenario: variant.scenario,
       variantLabel: variant.label ?? variant.scenario,
       strokeColor: variant.intersectsHazard ? "#dc2626" : color,
-      lineWidth: highlighted ? 9 : hasFocus ? 3 : 5,
-      lineOpacity: highlighted ? 1 : hasFocus ? 0.28 : 0.88,
+      lineWidth: dimmed ? 4 : highlighted ? 9 : hasFocus ? 3 : 5,
+      lineOpacity: dimmed ? 0.32 : highlighted ? 1 : hasFocus ? 0.28 : 0.88,
       lineDasharray: variant.intersectsHazard ? [2, 1.5] : [1, 0],
       selected: highlighted,
       intersectsHazard: Boolean(variant.intersectsHazard),
@@ -71,6 +72,8 @@ export function routesToFeatureCollection(
     draftVariants?: VariantLike[];
     previewVariantId?: string | null;
     showAllSavedVariants?: boolean;
+    /** When set, the matching route is emphasized and others are dimmed. */
+    focusedRouteId?: string | null;
   },
 ): FeatureCollection {
   const features: Feature<LineString>[] = [];
@@ -82,16 +85,27 @@ export function routesToFeatureCollection(
     return { type: "FeatureCollection", features };
   }
 
+  const focusedRouteId = options?.focusedRouteId ?? null;
+
   for (const route of routes) {
     const showAll = options?.showAllSavedVariants ?? false;
+    const dimmed = focusedRouteId != null && route.id !== focusedRouteId;
+    const previewId =
+      focusedRouteId != null
+        ? route.id === focusedRouteId
+          ? route.selectedVariantId
+          : null
+        : route.selectedVariantId;
+
     route.variants.forEach((variant, index) => {
       if (!showAll && route.selectedVariantId && variant.id !== route.selectedVariantId) {
         return;
       }
       features.push(
-        variantToLineFeature(variant, index, route.selectedVariantId, {
+        variantToLineFeature(variant, index, previewId, {
           routeId: route.id,
           routeName: route.name,
+          dimmed,
         }),
       );
     });
@@ -108,6 +122,57 @@ export function enrichVariantsWithHazards(
     const { intersects, hits } = check(v.geojson.geometry);
     return { ...v, intersectsHazard: intersects, hazardHits: hits };
   });
+}
+
+function formatWaypointLabel(
+  point: { lat: number; lng: number; label?: string },
+  fallback: string,
+) {
+  return (
+    point.label?.trim() ||
+    `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}` ||
+    fallback
+  );
+}
+
+/** Start/end markers for all saved supply routes (visible on the main map). */
+export function supplyRoutesWaypointMarkers(
+  routes: SupplyRoute[],
+  options?: { highlightRouteId?: string | null },
+): FeatureCollection {
+  const features: FeatureCollection["features"] = [];
+  const highlightId = options?.highlightRouteId ?? null;
+
+  for (const route of routes) {
+    const dimmed = highlightId != null && route.id !== highlightId;
+    const prefix = routes.length > 1 ? `${route.name}: ` : "";
+
+    features.push({
+      type: "Feature",
+      properties: {
+        kind: "route-origin",
+        label: `${prefix}Start — ${formatWaypointLabel(route.origin, "Start")}`,
+        routeId: route.id,
+        dimmed,
+      },
+      geometry: { type: "Point", coordinates: [route.origin.lng, route.origin.lat] },
+    });
+    features.push({
+      type: "Feature",
+      properties: {
+        kind: "route-destination",
+        label: `${prefix}End — ${formatWaypointLabel(route.destination, "End")}`,
+        routeId: route.id,
+        dimmed,
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [route.destination.lng, route.destination.lat],
+      },
+    });
+  }
+
+  return { type: "FeatureCollection", features };
 }
 
 export function waypointMarkersCollection(

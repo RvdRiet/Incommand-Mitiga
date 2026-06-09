@@ -675,11 +675,32 @@ export function searchIcsFormTemplates(query: string): IcsFormTemplate[] {
   );
 }
 
+export type IcsFormSaveMeta = {
+  savedAt: string;
+  savedBy: string;
+  savedByEmail?: string | null;
+  /** Client-generated PDF filename on last save. */
+  pdfFileName?: string | null;
+};
+
 export type IcsFormContentPayload = {
   v: 1;
   templateId: string;
   fields: Record<string, string>;
+  /** Field ids in official FEMA section order for export/replay. */
+  fieldOrder?: string[];
+  meta?: IcsFormSaveMeta;
 };
+
+export function buildFieldOrder(template: IcsFormTemplate): string[] {
+  const order: string[] = [];
+  for (const section of template.sections) {
+    for (const field of section.fields) {
+      order.push(field.id);
+    }
+  }
+  return order;
+}
 
 export function buildInitialFormContent(template: IcsFormTemplate): string {
   const fields: Record<string, string> = {};
@@ -699,14 +720,24 @@ export function buildInitialFormContent(template: IcsFormTemplate): string {
 export function parseFormContent(
   content: string,
   templateId: string | null,
-): { fields: Record<string, string>; isStructured: boolean } {
+): {
+  fields: Record<string, string>;
+  isStructured: boolean;
+  fieldOrder?: string[];
+  meta?: IcsFormSaveMeta;
+} {
   if (!content.trim()) {
     return { fields: {}, isStructured: false };
   }
   try {
     const parsed = JSON.parse(content) as IcsFormContentPayload;
     if (parsed?.v === 1 && parsed.fields && typeof parsed.fields === "object") {
-      return { fields: parsed.fields, isStructured: true };
+      return {
+        fields: parsed.fields,
+        isStructured: true,
+        fieldOrder: parsed.fieldOrder,
+        meta: parsed.meta,
+      };
     }
   } catch {
     /* legacy plain text */
@@ -720,8 +751,19 @@ export function parseFormContent(
 export function serializeFormFields(
   templateId: string,
   fields: Record<string, string>,
+  options?: {
+    fieldOrder?: string[];
+    meta?: IcsFormSaveMeta;
+  },
 ): string {
-  const payload: IcsFormContentPayload = { v: 1, templateId, fields };
+  const template = getIcsFormTemplate(templateId);
+  const payload: IcsFormContentPayload = {
+    v: 1,
+    templateId,
+    fields,
+    fieldOrder: options?.fieldOrder ?? (template ? buildFieldOrder(template) : undefined),
+    meta: options?.meta,
+  };
   return JSON.stringify(payload, null, 2);
 }
 

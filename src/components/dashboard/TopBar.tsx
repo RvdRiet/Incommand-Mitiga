@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { useEventId } from "@/context/EventContext";
@@ -29,7 +30,7 @@ export function TopBar({
   activationLevel?: ActivationLevel;
   moduleLabel?: string;
   moduleSlug?: string;
-  timerLabel?: string;
+  timerLabel?: ReactNode;
 }) {
   const eventId = useEventId();
   const onDashboard = !moduleSlug;

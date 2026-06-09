@@ -2,10 +2,13 @@ import { createDefaultContactGroups, createDefaultStatusBoard } from "./d4h-defa
 import { newId } from "./id";
 import type { IncidentState, Situation } from "./types";
 
+/** Fixed default so SSR and pre-hydration client paint match (not `new Date()`). */
+export const DEFAULT_SITUATION_START_DATE = "2026-01-01T08:00";
+
 export function defaultSituation(name = "New Event"): Situation {
   return {
     name,
-    startDate: new Date().toISOString().slice(0, 16),
+    startDate: DEFAULT_SITUATION_START_DATE,
     endDate: "",
     location: "",
     lat: null,

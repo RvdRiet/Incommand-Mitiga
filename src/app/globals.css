@@ -602,14 +602,7 @@ button {
   padding: 0;
 }
 
-/* Situation */
-.ic-situation__form {
-  padding: 16px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  max-width: 900px;
-}
+/* Situation layout — see ui-modern.css */
 
 .ic-panel-header {
   display: none;
@@ -1696,6 +1689,42 @@ button {
 
 .ic-form-editor__head h3 {
   margin: 0;
+}
+
+.ic-form-editor__toolbar {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ic-border, #e2e8f0);
+}
+
+.ic-form-editor__save-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.ic-form-editor__save-meta {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ic-muted, #64748b);
+}
+
+.ic-form-editor__save-meta--hint {
+  font-style: italic;
+}
+
+.ic-form-editor__save-notice {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ic-brand, #0d9488);
+  font-weight: 600;
+}
+
+.ic-field--compact {
+  gap: 4px;
 }
 
 .ic-form-editor__subtitle {

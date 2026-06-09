@@ -6,6 +6,9 @@ type MapRouteFloatingPanelProps = {
   open: boolean;
   title?: string;
   onClose?: () => void;
+  onSave?: () => void;
+  saveDisabled?: boolean;
+  saveHint?: string;
   children: React.ReactNode;
 };
 
@@ -15,6 +18,9 @@ export function MapRouteFloatingPanel({
   open,
   title = "Route planner",
   onClose,
+  onSave,
+  saveDisabled = true,
+  saveHint,
   children,
 }: MapRouteFloatingPanelProps) {
   const [pos, setPos] = useState(DEFAULT_POS);
@@ -80,6 +86,20 @@ export function MapRouteFloatingPanel({
       >
         <span className="ic-route-float__title">{title}</span>
         <div className="ic-route-float__actions">
+          {onSave ? (
+            <button
+              type="button"
+              className="ic-route-float__save-btn"
+              disabled={saveDisabled}
+              title={saveHint}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSave();
+              }}
+            >
+              Save route
+            </button>
+          ) : null}
           <button
             type="button"
             className="ic-route-float__icon-btn"
