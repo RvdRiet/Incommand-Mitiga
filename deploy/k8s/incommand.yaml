@@ -1,0 +1,121 @@
+# InCommand — Kubernetes deployment (managed Postgres).
+#
+# Assumes: managed Postgres with a built-in TRANSACTION-mode pooler (Neon /
+# Supabase / Cloud SQL + PgBouncer / RDS Proxy), managed Redis, and S3/R2 object
+# storage. The app is stateless (JWT sessions + state in Postgres/S3), so it
+# scales horizontally behind the HPA below.
+#
+# Secrets are read from `incommand-secrets` (see secret.example.yaml). NOTE: the
+# app's DATABASE_URL is the LEAST-PRIVILEGE role (mitiga_app) pointed at the
+# pooler endpoint. Migrations/seed run as a separate Job with the privileged
+# DATABASE_ADMIN_URL — never give the app pods admin DB credentials.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: incommand
+  labels: { app: incommand }
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: incommand }
+  template:
+    metadata:
+      labels: { app: incommand }
+    spec:
+      # Allow in-flight requests + graceful pool drain (SIGTERM closes the pool).
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: web
+          image: ghcr.io/your-org/incommand:latest # <-- set your image
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef: { name: incommand-secrets }
+          env:
+            # Behind a transaction pooler, keep each pod's pool small so
+            # replicas * DB_POOL_MAX stays well under the pooler's limit.
+            - { name: DB_POOL_MAX, value: "5" }
+            - { name: NODE_ENV, value: "production" }
+          # Liveness = "process is up"; readiness additionally checks Postgres so
+          # traffic only routes to pods that can actually serve.
+          livenessProbe:
+            httpGet: { path: /api/health, port: 3000 }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet: { path: /api/health/ready, port: 3000 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests: { cpu: "250m", memory: "512Mi" }
+            limits: { cpu: "1000m", memory: "1Gi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: incommand
+spec:
+  selector: { app: incommand }
+  ports:
+    - port: 80
+      targetPort: 3000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: incommand
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: incommand
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }
+---
+# Run DB migrations as a one-off Job with the PRIVILEGED admin URL, before/at
+# rollout. Keep this credential out of the Deployment above.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: incommand-migrate
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: postgres:16-alpine
+          command: ["/bin/sh", "-c"]
+          # Tracked, ordered, idempotent apply (mirrors `npm run db:migrate`): a
+          # schema_migrations row is recorded per applied file so re-runs skip it.
+          # (Or run `npm run db:migrate` from a migrator image that has the code.)
+          args:
+            - >-
+              set -e;
+              psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c
+              "CREATE TABLE IF NOT EXISTS schema_migrations(version text primary key, checksum text not null default 'k8s', applied_at timestamptz not null default now());";
+              for f in $(ls /migrations/*.sql | sort); do
+                v=$(basename "$f" .sql);
+                if [ "$(psql "$DATABASE_ADMIN_URL" -tAc "SELECT 1 FROM schema_migrations WHERE version='$v'")" = "1" ]; then echo "skip $v"; continue; fi;
+                echo "apply $v"; psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 --single-transaction -f "$f";
+                psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c "INSERT INTO schema_migrations(version) VALUES ('$v')";
+              done
+          env:
+            - name: DATABASE_ADMIN_URL
+              valueFrom:
+                secretKeyRef: { name: incommand-secrets, key: DATABASE_ADMIN_URL }
+          volumeMounts:
+            - { name: migrations, mountPath: /migrations }
+      volumes:
+        # Ship migrations via a ConfigMap or bake them into a migration image.
+        - name: migrations
+          configMap: { name: incommand-migrations }

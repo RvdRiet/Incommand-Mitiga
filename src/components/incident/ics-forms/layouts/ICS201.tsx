@@ -1,5 +1,7 @@
 "use client";
 
+import { useIncidentStore } from "@/context/EventContext";
+
 import {
   FemaIncidentHeader,
   FemaPageFooter,
@@ -43,6 +45,19 @@ const ORG_LABELS: Record<(typeof ORG_POSITIONS)[number], string> = {
   financeChief: "Finance/Admin Section Chief",
 };
 
+/** Substring matchers to map free-text Role titles onto the fixed ICS-201 §9 positions. */
+const ORG_MATCHERS: Record<(typeof ORG_POSITIONS)[number], (title: string) => boolean> = {
+  incidentCommander: (t) => t.includes("incident commander") || t.includes("commander"),
+  liaisonOfficer: (t) => t.includes("liaison"),
+  safetyOfficer: (t) => t.includes("safety"),
+  publicInfoOfficer: (t) =>
+    t.includes("public information") || t.includes("public info") || t.includes("pio"),
+  planningChief: (t) => t.includes("planning"),
+  operationsChief: (t) => t.includes("operations") || t.includes("operational"),
+  logisticsChief: (t) => t.includes("logistics"),
+  financeChief: (t) => t.includes("finance") || t.includes("admin"),
+};
+
 export type FemaLayoutProps = {
   fields: Record<string, string>;
   setField: (id: string, v: string) => void;
@@ -50,6 +65,22 @@ export type FemaLayoutProps = {
 
 export function ICS201Layout({ fields, setField }: FemaLayoutProps) {
   const resourceTable = useTableField(fields, "resourceRows", RESOURCE_COLS, 8, setField);
+  const roleGroups = useIncidentStore((s) => s.roleGroups);
+  const personnel = useIncidentStore((s) => s.personnel);
+
+  /** Pull the current Roles assignments into the §9 organization fields. */
+  const loadOrgFromRoles = () => {
+    const nameById = new Map(personnel.map((p) => [p.id, p.name || ""]));
+    const roles = roleGroups.flatMap((g) => g.roles);
+    for (const position of ORG_POSITIONS) {
+      const match = roles.find(
+        (r) => r.title && ORG_MATCHERS[position](r.title.toLowerCase()),
+      );
+      if (!match) continue;
+      const name = match.personnelId ? nameById.get(match.personnelId) ?? "" : "";
+      if (name) setField(position, name);
+    }
+  };
 
   return (
     <FemaShell title="INCIDENT BRIEFING (ICS 201)" subtitle="ICS 201" version="Version 3.0">
@@ -93,6 +124,14 @@ export function ICS201Layout({ fields, setField }: FemaLayoutProps) {
         <FemaIncidentHeader fields={fields} onChange={setField} />
         <p className="fema-ics-form__block-title">
           9. Current Organization (fill in additional organization as appropriate):
+          <button
+            type="button"
+            className="fema-ics-form__load-btn"
+            onClick={loadOrgFromRoles}
+            title="Fill from the incident Roles module"
+          >
+            ⤵ Load from Roles
+          </button>
         </p>
         <div className="fema-ics-form__org-grid">
           {ORG_POSITIONS.map((key) => (

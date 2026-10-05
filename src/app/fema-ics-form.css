@@ -56,11 +56,40 @@
   overflow: hidden;
   break-inside: avoid;
   page-break-after: always;
+  display: flex;
+  flex-direction: column;
 }
 
+/* Fill the printable letter height so content spans the whole page and the
+   footer sits at the bottom, instead of bunching in the top half. */
 .fema-ics-form__pdf-sheet .fema-ics-form__page {
   border-bottom: none;
   padding-bottom: 8px;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 10in;
+}
+
+/* Free-text fields (Map/Sketch, Objectives, Actions, …) grow to absorb slack. */
+.fema-ics-form__pdf-sheet .fema-ics-form__field--fill {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.fema-ics-form__pdf-sheet .fema-ics-form__field--fill .fema-ics-form__pdf-value--fill {
+  flex: 1 1 auto;
+}
+/* Map/Sketch takes a larger share of the slack than the text boxes below it. */
+.fema-ics-form__pdf-sheet .fema-ics-form__field--fill .fema-ics-form__pdf-value--map {
+  flex-grow: 1.7;
+}
+
+/* Table / organization pages: let the structural block grow so the footer
+   still lands at the page bottom. */
+.fema-ics-form__pdf-sheet .fema-ics-form__table-wrap,
+.fema-ics-form__pdf-sheet .fema-ics-form__org-grid {
+  flex: 1 1 auto;
 }
 
 .fema-ics-form__pdf-sheet .fema-ics-form__page-footer {
@@ -305,4 +334,101 @@
   .fema-ics-form__table-actions {
     display: none;
   }
+}
+
+/* Per-row remove button on editable form tables (hidden in PDF export — buttons are stripped). */
+.fema-ics-form__row-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid #e6b8b8;
+  background: #fff;
+  color: #dc2626;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.fema-ics-form__row-remove:hover:not(:disabled) {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+}
+
+.fema-ics-form__row-remove:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
+/* ============================================================================
+   ON-SCREEN EDITING — spacious, readable, auto-scaling. Scoped to the editor
+   panel only; PDF export renders a detached clone appended to <body> with an
+   inline 8.5in width, so none of this reaches the export. Optimised for filling
+   forms in, not for print fidelity.
+   ========================================================================== */
+
+.ic-form-editor--fema .fema-ics-form {
+  max-width: 1040px;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Comfortable, tappable inputs */
+.ic-form-editor--fema .fema-ics-form__field input,
+.ic-form-editor--fema .fema-ics-form__field textarea,
+.ic-form-editor--fema .fema-ics-form__field select {
+  font-size: 13px;
+  padding: 8px 10px;
+  line-height: 1.45;
+  border-radius: 4px;
+}
+
+.ic-form-editor--fema .fema-ics-form__field > span:first-child,
+.ic-form-editor--fema .fema-ics-form__field label {
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
+}
+
+/* Textareas grow with their content as you type (no more tiny fixed boxes). */
+.ic-form-editor--fema .fema-ics-form__box {
+  field-sizing: content;
+  min-height: 66px;
+  max-height: 55vh;
+  padding: 9px 11px;
+  line-height: 1.5;
+}
+
+.ic-form-editor--fema .fema-ics-form__box--tall {
+  min-height: 130px;
+}
+
+.ic-form-editor--fema .fema-ics-form__box--map {
+  min-height: 190px;
+}
+
+/* Roomier tables */
+.ic-form-editor--fema .fema-ics-form__table th,
+.ic-form-editor--fema .fema-ics-form__table td {
+  font-size: 12px;
+  padding: 5px 7px;
+}
+
+.ic-form-editor--fema .fema-ics-form__table input,
+.ic-form-editor--fema .fema-ics-form__table select {
+  font-size: 12px;
+  padding: 6px 7px;
+}
+
+/* A touch more air between blocks so it doesn't read as a dense wall */
+.ic-form-editor--fema .fema-ics-form__row {
+  margin-bottom: 14px;
+}
+
+.ic-form-editor--fema .fema-ics-form__block-title {
+  font-size: 12px;
 }

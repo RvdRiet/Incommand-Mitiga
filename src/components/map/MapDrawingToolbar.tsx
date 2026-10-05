@@ -2,7 +2,7 @@
 
 import type { MapBasemapTheme } from "@/lib/maps/basemap-theme";
 
-export type MapTool = "none" | "location" | "polygon" | "circle" | "route";
+export type MapTool = "none" | "location" | "polygon" | "circle" | "route" | "road-damage";
 
 type MapDrawingToolbarProps = {
   basemapTheme: MapBasemapTheme;
@@ -17,6 +17,8 @@ type MapDrawingToolbarProps = {
   circleRadiusMeters: number;
   onCircleRadiusChange: (meters: number) => void;
   onApplyCircle: () => void;
+  roadDamagePlotted: number;
+  onFinishRoadDamage: () => void;
 };
 
 const TOOLS: { id: MapTool; label: string; description: string }[] = [
@@ -24,6 +26,7 @@ const TOOLS: { id: MapTool; label: string; description: string }[] = [
   { id: "location", label: "Location", description: "Set incident coordinates" },
   { id: "polygon", label: "Polygon", description: "Draw a planning or affected area" },
   { id: "circle", label: "Radius", description: "Draw a circle by center and radius" },
+  { id: "road-damage", label: "Road damage", description: "Plot a damaged road by clicking the map" },
   { id: "route", label: "Routes", description: "Plan supply routes with diversions and driver links" },
 ];
 
@@ -40,6 +43,8 @@ export function MapDrawingToolbar({
   circleRadiusMeters,
   onCircleRadiusChange,
   onApplyCircle,
+  roadDamagePlotted,
+  onFinishRoadDamage,
 }: MapDrawingToolbarProps) {
   const activeMeta = TOOLS.find((t) => t.id === tool) ?? TOOLS[0]!;
 
@@ -120,8 +125,8 @@ export function MapDrawingToolbar({
           <div className="ic-map-navbar__controls">
             <p className="ic-map-navbar__hint">
               {circleCenterSet
-                ? "Adjust radius below or click the map to set distance from center."
-                : "Click the map to set the circle center."}
+                ? "Move the mouse to size the circle — you'll see it live — then click to lock it (or use the slider). Save when it's right."
+                : "Click the map to drop the circle centre."}
             </p>
             <label className="ic-map-navbar__field">
               <span>Radius (meters)</span>
@@ -152,6 +157,29 @@ export function MapDrawingToolbar({
                 onClick={onCancelDraw}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {tool === "road-damage" ? (
+          <div className="ic-map-navbar__controls">
+            <p className="ic-map-navbar__hint">
+              Click the road on the map to drop a damage marker — no coordinates needed. Keep
+              clicking to plot more. Each one is added to the Road damages tab, where you can name
+              the road and set its status.
+            </p>
+            <div className="ic-map-navbar__stat">
+              <span className="ic-map-navbar__stat-label">Plotted this session</span>
+              <strong>{roadDamagePlotted}</strong>
+            </div>
+            <div className="ic-map-navbar__btn-row">
+              <button
+                type="button"
+                className="ic-map-navbar__btn ic-map-navbar__btn--primary"
+                onClick={onFinishRoadDamage}
+              >
+                Done
               </button>
             </div>
           </div>

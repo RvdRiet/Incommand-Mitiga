@@ -62,7 +62,38 @@
 }
 
 .events-start-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
   margin-bottom: 28px;
+}
+
+.events-registry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.14));
+  background: var(--ic-surface, #fff);
+  color: var(--ic-text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--shadow-md);
+  transition: border-color var(--transition), box-shadow var(--transition), transform 0.1s ease;
+}
+
+.events-registry-btn:hover {
+  border-color: var(--ic-primary, #e2483d);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+.events-registry-btn__icon {
+  font-size: 1.125rem;
+  line-height: 1;
 }
 
 .events-start-btn {
@@ -240,6 +271,19 @@
   color: var(--ic-muted);
 }
 
+/* Badge diet: non-attention statuses render as plain text, not a chip. */
+.events-status-plain {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ic-muted);
+}
+
+/* Activated is the one state that earns a solid, attention-grabbing chip. */
+.events-status-chip--activated {
+  background: var(--ic-brand);
+  color: #fff;
+}
+
 .events-row__chevron {
   color: var(--ic-muted-light);
   font-size: 1.25rem;
@@ -345,4 +389,67 @@
 .events-main,
 .events-map-coords {
   display: none;
+}
+
+/* Incident template picker (New event flow) */
+.events-template-picker {
+  width: 100%;
+  max-width: 640px;
+}
+
+.events-template-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.events-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.6rem;
+}
+
+.events-template-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.9rem;
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid var(--ic-border, rgba(255, 255, 255, 0.14));
+  background: var(--ic-surface-2, rgba(255, 255, 255, 0.04));
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.events-template-tile:hover {
+  border-color: var(--ic-primary, #e2483d);
+  transform: translateY(-1px);
+}
+
+.events-template-tile__icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.events-template-tile__name {
+  font-weight: 700;
+}
+
+.events-template-tile__blurb {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.events-new-form__icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  margin-right: 0.25rem;
+}
+
+.events-row__icon-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
 }

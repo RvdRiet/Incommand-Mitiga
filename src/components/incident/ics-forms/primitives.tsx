@@ -262,7 +262,7 @@ export function FemaTable({
             {columns.map((col) => (
               <th key={col}>{columnLabels[col] ?? col}</th>
             ))}
-            <th aria-label="Actions" style={{ width: 32 }} />
+            <th aria-label="Remove" style={{ width: 40 }} />
           </tr>
         </thead>
         <tbody>
@@ -286,7 +286,14 @@ export function FemaTable({
                 </td>
               ))}
               <td>
-                <button type="button" onClick={() => removeRow(i)} title="Remove row">
+                <button
+                  type="button"
+                  className="fema-ics-form__row-remove"
+                  onClick={() => removeRow(i)}
+                  disabled={data.length <= minRows}
+                  title={data.length <= minRows ? "Minimum rows reached" : "Remove this row"}
+                  aria-label="Remove row"
+                >
                   ×
                 </button>
               </td>

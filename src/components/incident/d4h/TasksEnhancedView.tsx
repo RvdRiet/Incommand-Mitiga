@@ -61,7 +61,7 @@ export function TasksEnhancedView({ searchActive }: ViewProps) {
           </div>
         </div>
         <p className="ic-d4h-header__sub">
-          D4H-style task boards with checklists — use Plays to spawn pre-built task collections.
+          Task boards with checklists — use Plays to spawn pre-built task collections.
         </p>
       </header>
 

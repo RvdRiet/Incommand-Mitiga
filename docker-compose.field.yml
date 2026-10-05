@@ -1,0 +1,27 @@
+# Field/public LiveKit override. Runs LiveKit with livekit/livekit.yaml (real TURN +
+# public ICE) instead of --dev, and opens the media ports needed for cellular clients.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.field.yml up -d livekit
+#
+# Then in .env.local point the app at the PUBLIC url + pin it:
+#   LIVEKIT_URL=wss://livekit.your-domain          (or ws://<public-ip>:7880 for a quick test)
+#   NEXT_PUBLIC_LIVEKIT_URL=wss://livekit.your-domain
+#   LIVEKIT_URL_STATIC=1                            (don't let the LAN-IP fallback rewrite it)
+#   LIVEKIT_API_KEY / LIVEKIT_API_SECRET            (a NEW generated pair, not devkey/secret)
+#
+# See docs/LIVEKIT-FIELD.md for the full checklist (port-forwarding, TLS, or the
+# managed LiveKit Cloud shortcut).
+services:
+  livekit:
+    command: --config /etc/livekit/livekit.yaml
+    environment:
+      # Overrides the config's `keys` block. Set these in your shell / .env before `up`.
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}"
+    volumes:
+      - ./livekit/livekit.yaml:/etc/livekit/livekit.yaml:ro
+    ports:
+      - "7880:7880" # signaling (put wss behind a TLS reverse proxy on 443 for prod)
+      - "7881:7881" # ICE/TCP fallback
+      - "3478:3478/udp" # TURN
+      - "5349:5349" # TURN/TLS (when enabled)
+      - "50000-50100:50000-50100/udp" # WebRTC media range

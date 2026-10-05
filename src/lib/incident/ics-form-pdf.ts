@@ -50,8 +50,21 @@ function prepareCloneForPdf(source: HTMLElement): HTMLElement {
     block.className = "fema-ics-form__pdf-value";
     block.textContent = value;
     if (el instanceof HTMLTextAreaElement) {
-      const lineCount = Math.max(3, value.split("\n").length);
-      block.style.minHeight = `${lineCount * 1.35}em`;
+      // Preserve the box's intended size so the PDF matches the official form
+      // (Map/Sketch and other large free-text areas fill the page instead of
+      // collapsing to a few lines). `field-sizing: content` shrinks empty boxes
+      // on screen, but the PDF should always reserve the full box height.
+      const isMap = el.classList.contains("fema-ics-form__box--map");
+      const isTall = el.classList.contains("fema-ics-form__box--tall");
+      const baseIn = isMap ? 3.6 : isTall ? 2.1 : 0.55;
+      const contentIn = Math.max(3, value.split("\n").length) * 0.19;
+      block.style.minHeight = `${Math.max(baseIn, contentIn)}in`;
+      // These free-text boxes flex-grow to fill the page in the PDF sheet.
+      if (isMap || isTall) {
+        block.classList.add("fema-ics-form__pdf-value--fill");
+        if (isMap) block.classList.add("fema-ics-form__pdf-value--map");
+        el.parentElement?.classList.add("fema-ics-form__field--fill");
+      }
     } else {
       block.style.minHeight = "1.2em";
     }
@@ -227,20 +240,30 @@ function buildPdfSheets(femaRoot: HTMLElement): HTMLElement[] {
 }
 
 async function canvasForElement(el: HTMLElement): Promise<HTMLCanvasElement> {
+  // Capture the full border-box: scrollWidth/scrollHeight exclude the element's
+  // own border, which cropped the sheet's right and bottom outer border out of
+  // the PDF. offsetWidth/offsetHeight include it (max with scroll* stays safe if
+  // content ever overflows).
+  const width = Math.max(el.offsetWidth, el.scrollWidth);
+  const height = Math.max(el.offsetHeight, el.scrollHeight);
   return html2canvas(el, {
     scale: 2,
     useCORS: true,
     backgroundColor: "#ffffff",
     logging: false,
-    width: el.scrollWidth,
-    height: el.scrollHeight,
-    windowWidth: el.scrollWidth,
-    windowHeight: el.scrollHeight,
+    width,
+    height,
+    windowWidth: width,
+    windowHeight: height,
   });
 }
 
 function addCanvasToPdfPage(pdf: jsPDF, canvas: HTMLCanvasElement) {
-  const imgData = canvas.toDataURL("image/png", 0.92);
+  // JPEG, not PNG: the sheet is white-background text/lines, so lossy compression is
+  // invisible but shrinks the embedded image ~20–40× (a lossless full-page PNG at
+  // scale 2 was producing ~40 MB PDFs, over most email limits). The quality arg is
+  // honoured for JPEG (it is silently ignored for PNG).
+  const imgData = canvas.toDataURL("image/jpeg", 0.9);
   let imgW = CONTENT_W_IN;
   let imgH = (canvas.height / canvas.width) * imgW;
 
@@ -250,7 +273,7 @@ function addCanvasToPdfPage(pdf: jsPDF, canvas: HTMLCanvasElement) {
     imgH = CONTENT_H_IN;
   }
 
-  pdf.addImage(imgData, "PNG", MARGIN_IN, MARGIN_IN, imgW, imgH);
+  pdf.addImage(imgData, "JPEG", MARGIN_IN, MARGIN_IN, imgW, imgH);
 }
 
 function addMetaFooter(pdf: jsPDF, meta: IcsFormSaveMeta) {
@@ -266,7 +289,12 @@ function addMetaFooter(pdf: jsPDF, meta: IcsFormSaveMeta) {
 /** Export rendered FEMA layout to letter-size PDF with proper page breaks. */
 export async function exportFemaFormToPdf(
   root: HTMLElement,
-  options: { filename: string; meta?: IcsFormSaveMeta },
+  options: {
+    filename: string;
+    meta?: IcsFormSaveMeta;
+    /** Optional archiver — receives the generated PDF bytes (e.g. upload to blob storage). */
+    archive?: (blob: Blob) => void | Promise<void>;
+  },
 ): Promise<void> {
   const femaRoot = resolveFemaRoot(root);
   if (!femaRoot) throw new Error("No FEMA form layout found to export");
@@ -296,6 +324,7 @@ export async function exportFemaFormToPdf(
     }
 
     pdf.save(options.filename);
+    if (options.archive) await options.archive(pdf.output("blob"));
   } finally {
     measureHost?.remove();
     measureHost = null;
@@ -306,7 +335,11 @@ export async function exportFemaFormToPdf(
 export async function exportLegacyFormTextToPdf(
   title: string,
   body: string,
-  options: { filename: string; meta?: IcsFormSaveMeta },
+  options: {
+    filename: string;
+    meta?: IcsFormSaveMeta;
+    archive?: (blob: Blob) => void | Promise<void>;
+  },
 ): Promise<void> {
   const pdf = new jsPDF({ orientation: "portrait", unit: "in", format: "letter" });
   const margin = MARGIN_IN;
@@ -337,6 +370,7 @@ export async function exportLegacyFormTextToPdf(
     y += 0.18;
   }
   pdf.save(options.filename);
+  if (options.archive) await options.archive(pdf.output("blob"));
 }
 
 export async function exportIcsFormRecordToPdf(
@@ -347,13 +381,18 @@ export async function exportIcsFormRecordToPdf(
     savedAt: string;
     meta?: IcsFormSaveMeta;
     legacyText?: string;
+    /** Optional archiver — receives the PDF bytes + its filename (e.g. blob-storage upload). */
+    archive?: (blob: Blob, filename: string) => void | Promise<void>;
   },
 ): Promise<string> {
   const filename = icsFormPdfFilename(options.formNumber, options.formName, options.savedAt);
   const root = getExportRoot();
+  const archive = options.archive
+    ? (blob: Blob) => options.archive!(blob, filename)
+    : undefined;
 
   if (root && resolveFemaRoot(root)) {
-    await exportFemaFormToPdf(root, { filename, meta: options.meta });
+    await exportFemaFormToPdf(root, { filename, meta: options.meta, archive });
     return filename;
   }
 
@@ -361,6 +400,7 @@ export async function exportIcsFormRecordToPdf(
     await exportLegacyFormTextToPdf(options.formName, options.legacyText, {
       filename,
       meta: options.meta,
+      archive,
     });
     return filename;
   }

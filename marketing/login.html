@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Client sign in — InCommand</title>
+<meta name="description" content="Secure sign in for existing InCommand clients.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#070d18">
+<style>
+  :root{
+    --bg:#070d18;--bg-2:#0a1120;--surface:#0e1a2f;--line:#1b2942;--line-2:#26395a;
+    --ink:#eaf1fb;--ink-2:#adbcd4;--muted:#7386a3;--brand:#fb3b6a;--teal:#2dd4bf;--blue:#38bdf8;
+    --sans:-apple-system,"Segoe UI",system-ui,Roboto,Helvetica,Arial,sans-serif;
+    --mono:"Cascadia Code","SF Mono",ui-monospace,"Consolas",monospace;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased;}
+  a{color:inherit;}
+  .shell{display:grid;grid-template-columns:1.05fr .95fr;min-height:100vh;}
+
+  /* left brand panel */
+  .aside{position:relative;overflow:hidden;border-right:1px solid var(--line);padding:40px 52px;display:flex;flex-direction:column;justify-content:space-between;background:var(--bg-2);}
+  .aside__glow{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(620px 420px at 80% 10%,rgba(45,212,191,.16),transparent 62%),radial-gradient(560px 380px at 0% 100%,rgba(251,59,106,.16),transparent 60%);}
+  .aside__grid{position:absolute;inset:0;opacity:.5;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:52px 52px;
+    -webkit-mask-image:radial-gradient(600px 500px at 60% 40%,#000,transparent 75%);mask-image:radial-gradient(600px 500px at 60% 40%,#000,transparent 75%);}
+  .logo{position:relative;display:flex;align-items:center;gap:11px;font-weight:750;font-size:17px;}
+  .logo__m{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(150deg,var(--brand),#9f1239);box-shadow:0 3px 14px -4px rgba(251,59,106,.7);}
+  .logo__m svg{width:17px;height:17px;color:#fff;}
+  .logo small{font-family:var(--mono);font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.1em;}
+  .aside__mid{position:relative;max-width:30ch;}
+  .aside__mid h1{font-size:32px;line-height:1.12;letter-spacing:-.025em;margin:0 0 16px;font-weight:780;}
+  .aside__mid p{color:var(--ink-2);font-size:15px;line-height:1.6;margin:0;}
+  .aside__stat{position:relative;display:flex;gap:26px;}
+  .aside__stat div b{display:block;font-size:19px;font-weight:750;}
+  .aside__stat div span{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+
+  /* right form */
+  .main{display:flex;align-items:center;justify-content:center;padding:40px 24px;}
+  .card{width:100%;max-width:400px;}
+  .card__head{margin-bottom:26px;}
+  .card__head h2{margin:0 0 7px;font-size:24px;letter-spacing:-.02em;}
+  .card__head p{margin:0;color:var(--ink-2);font-size:14px;}
+  .field{margin-bottom:15px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:7px;}
+  .inp{width:100%;background:var(--surface);border:1px solid var(--line-2);border-radius:10px;color:var(--ink);font-size:14.5px;font-family:inherit;padding:12px 14px;transition:border-color .2s,box-shadow .2s;}
+  .inp::placeholder{color:var(--muted);}
+  .inp:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(45,212,191,.16);}
+  .field--pw{position:relative;}
+  .reveal-pw{position:absolute;right:8px;top:31px;background:none;border:none;color:var(--muted);cursor:pointer;padding:6px;border-radius:6px;}
+  .reveal-pw:hover{color:var(--ink-2);}
+  .rowbetween{display:flex;align-items:center;justify-content:space-between;margin:4px 0 20px;}
+  .remember{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);cursor:pointer;user-select:none;}
+  .remember input{accent-color:var(--teal);width:15px;height:15px;}
+  .link{font-size:13px;color:var(--teal);}
+  .link:hover{text-decoration:underline;}
+  .btn{width:100%;display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:650;font-size:15px;padding:13px 20px;border-radius:11px;border:1px solid transparent;cursor:pointer;font-family:inherit;transition:transform .16s var(--ease),filter .2s;}
+  .btn--primary{background:var(--brand);color:#fff;box-shadow:0 8px 24px -10px rgba(251,59,106,.8);}
+  .btn--primary:hover{filter:brightness(1.08);transform:translateY(-1px);}
+  .btn--sso{background:var(--surface);border-color:var(--line-2);color:var(--ink);margin-top:11px;}
+  .btn--sso:hover{border-color:var(--teal);}
+  .divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--muted);font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;}
+  .divider::before,.divider::after{content:"";height:1px;flex:1;background:var(--line);}
+  .notice{margin-top:22px;font-size:12.5px;color:var(--muted);line-height:1.55;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:rgba(56,189,248,.04);}
+  .notice b{color:var(--ink-2);}
+  .foot{margin-top:22px;font-size:13.5px;color:var(--ink-2);}
+  .back{position:absolute;top:24px;left:24px;font-size:13px;color:var(--ink-2);display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line);border-radius:9px;background:rgba(7,13,24,.5);}
+  .back:hover{color:var(--ink);border-color:var(--line-2);}
+
+  @media (max-width:860px){
+    .shell{grid-template-columns:1fr;}
+    .aside{display:none;}
+    .back{position:static;margin-bottom:24px;}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- brand panel -->
+  <aside class="aside">
+    <div class="aside__glow"></div>
+    <div class="aside__grid"></div>
+    <a class="logo" href="index.html"><span class="logo__m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/></svg></span> InCommand <small>MITIGA</small></a>
+    <div class="aside__mid">
+      <h1>Your command center is standing by.</h1>
+      <p>Sign in to your operations console — situation boards, ICS forms, live comms, and mapping, right where you left them.</p>
+    </div>
+    <div class="aside__stat">
+      <div><b>99.9%</b><span>Uptime</span></div>
+      <div><b>26</b><span>Modules</span></div>
+      <div><b>ICS 201–260</b><span>Forms</span></div>
+    </div>
+  </aside>
+
+  <!-- form -->
+  <main class="main">
+    <div class="card">
+      <a class="back" href="index.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Back to site</a>
+      <div class="card__head">
+        <h2>Sign in</h2>
+        <p>Access your InCommand operations console.</p>
+      </div>
+
+      <form id="loginForm" novalidate autocomplete="on">
+        <div class="field">
+          <label for="email">Work email</label>
+          <input class="inp" id="email" name="email" type="email" inputmode="email" autocomplete="username" placeholder="you@municipality.gov.za" required>
+        </div>
+        <div class="field field--pw">
+          <label for="password">Password</label>
+          <input class="inp" id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••••" required>
+          <button class="reveal-pw" type="button" id="togglePw" aria-label="Show password">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="rowbetween">
+          <label class="remember"><input type="checkbox" name="remember"> Keep me signed in</label>
+          <a class="link" href="#">Forgot password?</a>
+        </div>
+        <button class="btn btn--primary" type="submit">Sign in <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <button class="btn btn--sso" type="button">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V8a5 5 0 0 1 10 0v3"/></svg>
+          Continue with SSO
+        </button>
+      </form>
+
+      <div class="divider">Secure access</div>
+      <p class="foot">New to InCommand? <a class="link" href="index.html#demo">Request a demo</a></p>
+
+      <div class="notice" id="devNotice">
+        <b>Prototype access.</b> Sign-in is a pass-through for now — any email and password (or SSO) takes you straight into the operations console. Wire this to your real identity provider before production.
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  // password visibility toggle
+  var pw = document.getElementById('password'), t = document.getElementById('togglePw');
+  t.addEventListener('click', function(){
+    var show = pw.type === 'password';
+    pw.type = show ? 'text' : 'password';
+    t.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  });
+
+  // --- Prototype sign-in --------------------------------------------------
+  // No credential logic yet: any submit (or SSO) takes you straight into the
+  // console. For production, change APP_URL to your deployed operations app
+  // and replace enterConsole() with a real auth handshake against your IdP.
+  var APP_URL = 'http://localhost:3000/';   // the disaster-management console
+
+  var form = document.getElementById('loginForm');
+  var submitBtn = form.querySelector('button[type="submit"]');
+  var sso = form.querySelector('.btn--sso');
+  var going = false;
+
+  function enterConsole(){
+    if (going) return;
+    going = true;
+    submitBtn.disabled = true;
+    if (sso) sso.disabled = true;
+    submitBtn.textContent = 'Signing in…';
+    // brief pause so the state change reads as a real sign-in
+    setTimeout(function(){ window.location.href = APP_URL; }, 450);
+  }
+
+  form.addEventListener('submit', function(e){ e.preventDefault(); enterConsole(); });
+  if (sso) sso.addEventListener('click', enterConsole);
+})();
+</script>
+</body>
+</html>

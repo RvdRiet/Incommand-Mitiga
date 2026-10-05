@@ -3,10 +3,18 @@
 import { useState } from "react";
 
 import { useIncidentStore } from "@/context/EventContext";
+import {
+  buildSupplyAlert,
+  DEFAULT_INVENTORY_REMINDER_DAYS,
+  inventorySummary,
+} from "@/lib/incident/inventory";
+import { IconAlertTriangle } from "@/components/ui/icons";
 
 export function NotificationsView() {
   const groups = useIncidentStore((s) => s.contactGroups);
   const notifications = useIncidentStore((s) => s.notifications);
+  const inventory = useIncidentStore((s) => s.inventory);
+  const settings = useIncidentStore((s) => s.settings);
   const addContactGroup = useIncidentStore((s) => s.addContactGroup);
   const updateContactGroup = useIncidentStore((s) => s.updateContactGroup);
   const removeContactGroup = useIncidentStore((s) => s.removeContactGroup);
@@ -18,6 +26,23 @@ export function NotificationsView() {
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [email, setEmail] = useState(true);
   const [sms, setSms] = useState(false);
+
+  const reminderDays = settings.inventoryReminderDays ?? DEFAULT_INVENTORY_REMINDER_DAYS;
+  const invSummary = inventorySummary(inventory, Date.now(), reminderDays);
+
+  const draftSupplyAlert = () => {
+    const alert = buildSupplyAlert(inventory, Date.now(), reminderDays);
+    if (!alert) return;
+    setSubject(alert.subject);
+    setBody(alert.body);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const supplyBits = [
+    invSummary.lowOut > 0 ? `${invSummary.lowOut} low/out of stock` : null,
+    invSummary.expiryFlagged > 0 ? `${invSummary.expiryFlagged} expiring` : null,
+    invSummary.maintFlagged > 0 ? `${invSummary.maintFlagged} service due` : null,
+  ].filter(Boolean);
 
   const toggleGroup = (id: string) => {
     setSelectedGroups((prev) =>
@@ -47,10 +72,28 @@ export function NotificationsView() {
       <header className="ic-d4h-header">
         <h2 className="ic-d4h-header__title">Notifications</h2>
         <p className="ic-d4h-header__sub">
-          D4H-style mass notification — compose alerts to contact groups. Delivery is simulated
+          Mass notification — compose alerts to contact groups. Delivery is simulated
           locally until SMS/email providers are connected (Twilio, Africa&apos;s Talking, etc.).
         </p>
       </header>
+
+      {invSummary.attention > 0 ? (
+        <div className="ic-supply-alert">
+          <span className="ic-supply-alert__msg">
+            <IconAlertTriangle size={15} />
+            <span>
+              <strong>
+                {invSummary.attention} inventory item
+                {invSummary.attention === 1 ? "" : "s"} need attention
+              </strong>
+              {supplyBits.length > 0 ? ` — ${supplyBits.join(" · ")}` : ""}
+            </span>
+          </span>
+          <button type="button" className="ic-btn-secondary" onClick={draftSupplyAlert}>
+            Draft supply alert
+          </button>
+        </div>
+      ) : null}
 
       <div className="ic-notifications__grid">
         <article className="ic-notifications__compose">

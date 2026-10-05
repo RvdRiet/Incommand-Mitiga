@@ -5,6 +5,7 @@ declare module "next-auth" {
     tenantId?: string;
     organizationId?: string;
     role?: string;
+    tokenVersion?: number;
   }
 
   interface Session {
@@ -22,5 +23,7 @@ declare module "next-auth/jwt" {
     userId?: string;
     role?: string;
     organizationId?: string;
+    tokenVersion?: number;
+    checkedAt?: number;
   }
 }

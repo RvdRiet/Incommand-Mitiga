@@ -43,6 +43,10 @@ Open `http://localhost:3000`, sign in, and open the dashboard map.
 - [docs/WEATHER-TRAFFIC-SOURCES.md](docs/WEATHER-TRAFFIC-SOURCES.md)
 - [docs/rfc/RFC-002-field-mobile-sync.md](docs/rfc/RFC-002-field-mobile-sync.md)
 - [docs/rfc/RFC-003-webrtc-sip-media.md](docs/rfc/RFC-003-webrtc-sip-media.md)
+- [docs/rfc/RFC-004-live-ops-channels-telemetry.md](docs/rfc/RFC-004-live-ops-channels-telemetry.md)
+- [docs/rfc/RFC-005-live-ops-backend-services.md](docs/rfc/RFC-005-live-ops-backend-services.md)
+- [docs/rfc/RFC-006-web-ptt-webrtc-sip.md](docs/rfc/RFC-006-web-ptt-webrtc-sip.md)
+- [docs/rfc/RFC-007-livekit-bodycam-video.md](docs/rfc/RFC-007-livekit-bodycam-video.md)
 
 ## Scripts
 

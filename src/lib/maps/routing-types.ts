@@ -23,6 +23,11 @@ export type RouteVariant = {
   geojson: Feature<LineString>;
   googleMapsUrl: string;
   waypoints: RouteWaypoint[];
+  /** Engine that produced this line. "google" is traffic-aware but ONLINE-ONLY;
+   *  "osrm" (default) is free, offline-capable, and freely persistable. */
+  provider?: "osrm" | "google";
+  /** durationSeconds reflects live traffic (Google departure_time=now). */
+  trafficAware?: boolean;
 };
 
 export type SupplyRouteStatus = "planning" | "active" | "completed";

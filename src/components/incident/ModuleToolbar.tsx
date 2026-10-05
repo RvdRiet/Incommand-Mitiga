@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
-import { ALL_MODULES, moduleHref } from "@/lib/navigation/modules";
+import {
+  getAreaForModule,
+  getModuleBySlug,
+  isHubSlug,
+  moduleHref,
+} from "@/lib/navigation/modules";
+import { IconMenu } from "@/components/ui/icons";
 
 type ModuleToolbarProps = {
   eventId: string;
@@ -36,9 +41,10 @@ export function ModuleToolbar({
   filterActive = false,
   onMenuToggle,
 }: ModuleToolbarProps) {
-  const router = useRouter();
-  const dashboardHref = moduleHref(eventId, "");
   const onDashboard = !moduleSlug;
+  const area = getAreaForModule(moduleSlug);
+  const onHub = isHubSlug(moduleSlug);
+  const mod = getModuleBySlug(moduleSlug);
 
   return (
     <div className="ic-module-toolbar">
@@ -49,27 +55,27 @@ export function ModuleToolbar({
           aria-label="Open navigation menu"
           onClick={onMenuToggle}
         >
-          ☰
+          <IconMenu />
         </button>
-        {!onDashboard ? (
-          <Link href={dashboardHref} className="ic-module-toolbar__back">
-            ← Dashboard
-          </Link>
-        ) : null}
-        <label className="ic-module-jump">
-          <span className="ic-sr-only">Jump to module</span>
-          <select
-            className="ic-module-jump__select"
-            value={moduleSlug}
-            onChange={(e) => router.push(moduleHref(eventId, e.target.value))}
-          >
-            {ALL_MODULES.map((mod) => (
-              <option key={mod.slug || "dashboard"} value={mod.slug}>
-                {mod.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* Breadcrumb: Area › Page. Replaces the old jump-to dropdown so there is one
+            clear "where am I" trail instead of a redundant module switcher. */}
+        <nav className="ic-crumbs" aria-label="Breadcrumb">
+          {onDashboard ? (
+            <span className="ic-crumbs__here">Overview</span>
+          ) : (
+            <>
+              {area ? (
+                <Link href={moduleHref(eventId, area.hubSlug)} className="ic-crumbs__link">
+                  {area.label}
+                </Link>
+              ) : null}
+              {area && !onHub ? <span className="ic-crumbs__sep">›</span> : null}
+              {!onHub ? (
+                <span className="ic-crumbs__here">{mod?.label ?? ""}</span>
+              ) : null}
+            </>
+          )}
+        </nav>
       </div>
       <div className="ic-module-toolbar__right">
         {extraActions}

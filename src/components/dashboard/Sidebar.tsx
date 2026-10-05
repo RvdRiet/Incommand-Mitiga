@@ -2,22 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 import { useEventId } from "@/context/EventContext";
-import { IconGear } from "./icons";
+import { usePermissions } from "@/context/PermissionsContext";
+import { IconChevron, IconGear } from "./icons";
 import {
-  INFO_MODULES,
-  D4H_EXTRA_MODULES,
-  OPERATIONS_MODULES,
-  PRIMARY_MODULES,
-  SETTINGS_MODULE,
-  TASK_MODULE,
+  getModuleBySlug,
+  INCIDENT_AREAS,
   moduleHref,
+  SETTINGS_MODULE,
+  type NavArea,
 } from "@/lib/navigation/modules";
 
 export function Sidebar({ activeSlug }: { activeSlug: string }) {
   const pathname = usePathname();
   const eventId = useEventId();
+  const { canSee } = usePermissions();
 
   function isActive(slug: string) {
     if (activeSlug) return activeSlug === slug;
@@ -25,41 +26,77 @@ export function Sidebar({ activeSlug }: { activeSlug: string }) {
     return pathname === href || pathname === `${href}/`;
   }
 
-  function navLink(slug: string, label: string, Icon: React.ComponentType) {
-    const active = isActive(slug);
-    return (
-      <li key={slug || "dashboard"}>
-        <Link
-          href={moduleHref(eventId, slug)}
-          className={`ic-nav-link ${active ? "ic-nav-link--active" : ""}`}
-          aria-current={active ? "page" : undefined}
-        >
-          <Icon />
-          <span>{label}</span>
-        </Link>
-      </li>
-    );
+  // An area is "current" when the active page is its hub or one of its modules.
+  function areaContainsActive(area: NavArea) {
+    return area.hubSlug === activeSlug || area.moduleSlugs.includes(activeSlug);
   }
+
+  // Manual expand/collapse overrides; default open = the area holding the active page.
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  const isOpen = (area: NavArea) => overrides[area.id] ?? areaContainsActive(area);
 
   return (
     <aside className="ic-sidebar">
-      <nav className="ic-sidebar__nav" aria-label="Incident modules">
-        <ul className="ic-nav-list">
-          {PRIMARY_MODULES.map((item) => navLink(item.slug, item.label, item.icon))}
-        </ul>
+      <nav className="ic-sidebar__nav" aria-label="Incident areas">
+        {INCIDENT_AREAS.map((area) => {
+          // Only the modules this role may see; hide the whole area if none.
+          const visibleSlugs = area.moduleSlugs.filter((slug) => canSee(slug));
+          if (visibleSlugs.length === 0) return null;
+          // If the area's primary tool is hidden, point its label at the first visible one.
+          const primarySlug = canSee(area.primarySlug) ? area.primarySlug : visibleSlugs[0];
+          const open = isOpen(area);
+          const areaActive = areaContainsActive(area);
+          return (
+            <div
+              key={area.id}
+              className={`ic-nav-area${open ? " ic-nav-area--open" : ""}`}
+            >
+              <div className={`ic-nav-area__head${areaActive ? " ic-nav-area__head--active" : ""}`}>
+                <Link
+                  href={moduleHref(eventId, primarySlug)}
+                  className="ic-nav-area__label"
+                  aria-current={isActive(primarySlug) ? "page" : undefined}
+                >
+                  <area.icon />
+                  <span>{area.label}</span>
+                </Link>
+                <button
+                  type="button"
+                  className="ic-nav-area__toggle"
+                  aria-expanded={open}
+                  aria-label={`${open ? "Collapse" : "Expand"} ${area.label}`}
+                  onClick={() =>
+                    setOverrides((o) => ({ ...o, [area.id]: !open }))
+                  }
+                >
+                  <IconChevron className="ic-nav-area__chevron" />
+                </button>
+              </div>
 
-        <ul className="ic-nav-list ic-nav-list--divider">
-          {navLink(TASK_MODULE.slug, TASK_MODULE.label, TASK_MODULE.icon)}
-          {D4H_EXTRA_MODULES.map((item) => navLink(item.slug, item.label, item.icon))}
-        </ul>
-
-        <ul className="ic-nav-list ic-nav-list--divider">
-          {OPERATIONS_MODULES.map((item) => navLink(item.slug, item.label, item.icon))}
-        </ul>
-
-        <ul className="ic-nav-list ic-nav-list--divider">
-          {INFO_MODULES.map((item) => navLink(item.slug, item.label, item.icon))}
-        </ul>
+              {open ? (
+                <ul className="ic-nav-sublist">
+                  {visibleSlugs.map((slug) => {
+                    const mod = getModuleBySlug(slug);
+                    if (!mod) return null;
+                    const active = isActive(slug);
+                    return (
+                      <li key={slug || "dashboard"}>
+                        <Link
+                          href={moduleHref(eventId, slug)}
+                          className={`ic-nav-link ${active ? "ic-nav-link--active" : ""}`}
+                          aria-current={active ? "page" : undefined}
+                        >
+                          <mod.icon />
+                          <span>{mod.label}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+            </div>
+          );
+        })}
       </nav>
 
       <Link

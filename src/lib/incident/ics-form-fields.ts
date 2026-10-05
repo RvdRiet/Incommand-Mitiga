@@ -25,10 +25,9 @@ export function parseTableField(value: string | undefined, columns: string[]): I
 }
 
 export function stringifyTableField(rows: IcsTableRow[]): string {
-  const cleaned = rows.filter((row) =>
-    Object.values(row).some((v) => String(v).trim() !== ""),
-  );
-  return JSON.stringify(cleaned.length > 0 ? cleaned : [rows[0] ?? {}]);
+  // Preserve every row the user has (including blank ones they added with "+ Add row").
+  // Consumers that need only filled rows (e.g. channelsFromICS205, PDF export) filter themselves.
+  return JSON.stringify(rows.length > 0 ? rows : [{}]);
 }
 
 export function emptyRow(columns: string[]): IcsTableRow {

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { SignOutButton } from "@/components/SignOutButton";
-import { useEventId } from "@/context/EventContext";
+import { canManageUsers } from "@/lib/auth/roles";
 import { moduleHref } from "@/lib/navigation/modules";
 
 import { IconBell, IconHelp, IconUser } from "./icons";
@@ -76,6 +77,7 @@ export function TopBarNotificationsButton({ eventId }: MenuProps) {
 }
 
 export function TopBarAccountMenu({ eventId }: MenuProps) {
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -111,6 +113,14 @@ export function TopBarAccountMenu({ eventId }: MenuProps) {
       </button>
       {open ? (
         <ul id={menuId} className="ic-topbar-menu__dropdown" role="menu">
+          <li
+            role="none"
+            style={{ padding: "8px 12px", fontSize: 12, color: "var(--ic-muted)" }}
+          >
+            {session?.user?.email
+              ? `Signed in as ${session.user.email}`
+              : "Not signed in (local-only)"}
+          </li>
           <li role="none">
             <Link
               href="/"
@@ -121,6 +131,18 @@ export function TopBarAccountMenu({ eventId }: MenuProps) {
               All events
             </Link>
           </li>
+          {session?.user ? (
+            <li role="none">
+              <Link
+                href="/account/security"
+                className="ic-topbar-menu__dropdown-item"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+              >
+                Security (2FA)
+              </Link>
+            </li>
+          ) : null}
           {eventId ? (
             <li role="none">
               <Link
@@ -133,8 +155,43 @@ export function TopBarAccountMenu({ eventId }: MenuProps) {
               </Link>
             </li>
           ) : null}
+          {canManageUsers(session?.role) ? (
+            <>
+              <li role="none">
+                <Link
+                  href="/admin/users"
+                  className="ic-topbar-menu__dropdown-item"
+                  role="menuitem"
+                  onClick={() => setOpen(false)}
+                >
+                  Manage users
+                </Link>
+              </li>
+              <li role="none">
+                <Link
+                  href="/admin/roles"
+                  className="ic-topbar-menu__dropdown-item"
+                  role="menuitem"
+                  onClick={() => setOpen(false)}
+                >
+                  Roles &amp; access
+                </Link>
+              </li>
+            </>
+          ) : null}
           <li role="none" className="ic-topbar-menu__dropdown-divider">
-            <SignOutButton className="ic-topbar-menu__dropdown-item ic-topbar-menu__dropdown-item--button" />
+            {session?.user ? (
+              <SignOutButton className="ic-topbar-menu__dropdown-item ic-topbar-menu__dropdown-item--button" />
+            ) : (
+              <Link
+                href="/login"
+                className="ic-topbar-menu__dropdown-item"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+              >
+                Sign in
+              </Link>
+            )}
           </li>
         </ul>
       ) : null}

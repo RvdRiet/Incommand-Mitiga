@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { clientIp, enforceRateLimit } from "@/lib/auth/api-rate-limit";
 import { getLoadSheddingSnapshot } from "@/lib/loadshedding";
 
 export async function GET(req: Request) {
+  // Public data — no auth gate (works with a stale session); IP rate-limit bounds abuse.
+  const limited = await enforceRateLimit(`loadshedding:${clientIp(req)}`, 120, 60);
+  if (limited) return limited;
+
   const url = new URL(req.url);
   const lat = url.searchParams.get("lat");
   const lng = url.searchParams.get("lng");

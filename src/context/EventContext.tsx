@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { useStore, type StoreApi } from "zustand";
 
 import { ActivityTracker } from "@/components/incident/ActivityTracker";
+import { OfflineSyncBridge } from "@/components/incident/OfflineSyncBridge";
 import type { IncidentStore } from "@/lib/incident/store";
 import { getIncidentStore } from "@/lib/incident/incident-store-registry";
 
@@ -26,6 +27,7 @@ export function EventProvider({
     <EventIdContext.Provider value={eventId}>
       <IncidentStoreContext.Provider value={storeRef.current}>
         <ActivityTracker />
+        <OfflineSyncBridge />
         {children}
       </IncidentStoreContext.Provider>
     </EventIdContext.Provider>
@@ -46,6 +48,15 @@ export function useIncidentStore<T>(selector: (state: IncidentStore) => T): T {
     throw new Error("useIncidentStore must be used within EventProvider");
   }
   return useStore(store, selector);
+}
+
+/** The raw store handle, for `.subscribe`/`.getState` (e.g. the save indicator). */
+export function useIncidentStoreApi(): StoreApi<IncidentStore> {
+  const store = useContext(IncidentStoreContext);
+  if (!store) {
+    throw new Error("useIncidentStoreApi must be used within EventProvider");
+  }
+  return store;
 }
 
 type PersistApi = {

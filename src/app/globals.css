@@ -30,8 +30,10 @@ body {
   background: var(--ic-bg);
   color: var(--ic-text);
   font-family: var(--font-geist-sans), "Segoe UI", system-ui, sans-serif;
-  font-size: 14px;
+  font-size: var(--text-base);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -44,6 +46,37 @@ button {
   cursor: pointer;
   border: none;
   background: none;
+}
+
+/* Icon + label alignment for controls that use SVG icons (replacing emoji). */
+.ic-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.ic-btn-icon svg {
+  flex: none;
+}
+.events-registry-btn__icon,
+.ic-distress-banner__icon,
+.ic-situation-purpose__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.dev-registry__deploy-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ic-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  display: inline-block;
+  flex: none;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
 }
 
 /* App shell */
@@ -242,78 +275,6 @@ button {
   color: #1a1a1a;
 }
 
-/* Widget grid */
-.ic-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: minmax(140px, auto);
-  gap: 12px;
-}
-
-.ic-grid__log {
-  grid-column: 1;
-  grid-row: 1 / span 3;
-  min-height: 420px;
-}
-
-.ic-grid__map {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  min-height: 280px;
-}
-
-.ic-grid__personnel {
-  grid-column: 3;
-  grid-row: 1;
-}
-
-.ic-widget {
-  background: var(--ic-card);
-  border: 1px solid var(--ic-border);
-  border-radius: 2px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  display: flex;
-  flex-direction: column;
-  min-height: 130px;
-  overflow: hidden;
-}
-
-.ic-widget__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--ic-border);
-  background: #fafbfc;
-}
-
-.ic-widget__icon {
-  display: flex;
-  color: var(--ic-muted);
-}
-
-.ic-widget__title {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ic-text);
-}
-
-.ic-widget__body {
-  flex: 1;
-  padding: 16px 12px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 0;
-}
-
-.ic-widget__sub {
-  margin: 12px 0 0;
-  font-size: 12px;
-  color: var(--ic-muted);
-}
-
 .ic-empty {
   margin: 0;
   text-align: center;
@@ -322,30 +283,7 @@ button {
   padding: 24px 12px;
 }
 
-/* Metrics */
-.ic-metrics {
-  display: grid;
-  gap: 12px;
-  width: 100%;
-  text-align: center;
-}
-
-.ic-metrics--1 {
-  grid-template-columns: 1fr;
-}
-
-.ic-metrics--2 {
-  grid-template-columns: 1fr 1fr;
-}
-
-.ic-metrics--3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.ic-metrics--4 {
-  grid-template-columns: repeat(4, 1fr);
-}
-
+/* Metrics (shared with the analytics module) */
 .ic-metric__value {
   margin: 0;
   font-size: 36px;
@@ -358,12 +296,6 @@ button {
   margin: 6px 0 0;
   font-size: 12px;
   color: var(--ic-muted);
-}
-
-/* Map in widget */
-.ic-grid__map .ic-widget__body {
-  padding: 0;
-  position: relative;
 }
 
 .map-canvas-host--widget {
@@ -387,6 +319,46 @@ button {
   height: 100% !important;
 }
 
+/* Map / Satellite / Hybrid imagery switcher — top-left, above the canvas. */
+.ic-map-layer-switch {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 9px;
+  background: var(--ic-surface, #ffffff);
+  border: 1px solid var(--ic-border, #d7dee8);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.16);
+}
+
+.ic-map-layer-switch__btn {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ic-muted, #64748b);
+  background: transparent;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.ic-map-layer-switch__btn:hover {
+  color: var(--ic-text, #0f172a);
+  background: var(--ic-surface-muted, #f1f5f9);
+}
+
+.ic-map-layer-switch__btn--active,
+.ic-map-layer-switch__btn--active:hover {
+  color: #ffffff;
+  background: var(--ic-accent, #0d9488);
+}
+
 .map-canvas-status {
   position: absolute;
   inset: 0;
@@ -405,22 +377,6 @@ button {
 
 .maplibregl-ctrl-attrib {
   font-size: 9px !important;
-}
-
-@media (max-width: 1200px) {
-  .ic-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .ic-grid__log {
-    grid-row: auto;
-    min-height: 200px;
-  }
-
-  .ic-grid__map {
-    grid-column: span 2;
-    grid-row: auto;
-  }
 }
 
 /* Module toolbar (below top bar) */
@@ -527,17 +483,21 @@ button {
 
 .ic-table th {
   text-align: left;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border-bottom: 1px solid var(--ic-border);
   background: #fafbfc;
-  font-weight: 600;
-  color: var(--ic-text);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--ic-muted);
 }
 
 .ic-table td {
   padding: 10px 12px;
   border-bottom: 1px solid #eee;
   color: var(--ic-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .ic-table-empty {
@@ -573,8 +533,9 @@ button {
 .ic-page-heading {
   margin: 0;
   padding: 12px 16px;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--text-lg);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
   border-bottom: 1px solid var(--ic-border);
 }
 
@@ -611,7 +572,7 @@ button {
 .ic-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   font-size: 13px;
 }
 
@@ -619,21 +580,41 @@ button {
   grid-column: 1 / -1;
 }
 
-.ic-field span {
+/* Direct-child label only, so nested spans (e.g. inside a checkbox row) are untouched. */
+.ic-field > span {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--ic-muted);
 }
 
-.ic-field input,
-.ic-field textarea {
-  padding: 8px 10px;
-  border: 1px solid #e0e0e0;
-  background: #fffde7;
-  border-radius: 2px;
+/* Modern inputs. Checkboxes/radios keep their native look (excluded below). */
+.ic-field input:not([type="checkbox"]):not([type="radio"]),
+.ic-field textarea,
+.ic-field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 11px;
+  border: 1px solid var(--ic-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--ic-surface);
+  color: var(--ic-text);
+  font-size: var(--text-sm);
+  font-family: inherit;
 }
 
-.ic-field input:focus,
-.ic-field textarea:focus {
-  outline: 2px solid rgba(196, 30, 58, 0.25);
+.ic-field textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.ic-field input:not([type="checkbox"]):not([type="radio"]):focus,
+.ic-field textarea:focus,
+.ic-field select:focus {
+  outline: none;
+  border-color: var(--ic-primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
 }
 
 /* Roles */
@@ -652,6 +633,97 @@ button {
 
 .ic-forms-add {
   position: relative;
+}
+
+/* Library live sections */
+.ic-library__section-title {
+  margin: 4px 4px 2px;
+  font-size: var(--text-md);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.ic-library__section-hint {
+  margin: 0 4px 8px;
+  font-size: 0.75rem;
+  color: var(--ic-text-muted, #6b7280);
+  max-width: 70ch;
+}
+
+/* Forms-to-complete panel (driven by ICS 202 attachments) */
+.ic-required-forms {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ic-border);
+  background: rgba(13, 148, 136, 0.05);
+}
+
+.ic-required-forms__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ic-required-forms__sub {
+  font-size: 0.75rem;
+  color: var(--ic-text-muted, #6b7280);
+  flex: 1;
+  min-width: 0;
+}
+
+.ic-required-forms__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ic-required-forms__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 6px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.12));
+  border-radius: 999px;
+  background: var(--ic-surface, #fff);
+  font-size: 0.8125rem;
+}
+
+.ic-required-forms__item--done {
+  opacity: 0.7;
+}
+
+.ic-required-forms__check {
+  font-weight: 700;
+  color: var(--ic-primary, #0d9488);
+}
+
+.ic-required-forms__label {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.ic-required-forms__label:hover {
+  text-decoration: underline;
+}
+
+.ic-required-forms__status {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ic-text-muted, #6b7280);
+}
+
+.ic-required-forms__item:not(.ic-required-forms__item--done) .ic-required-forms__status {
+  color: var(--ic-primary, #0d9488);
 }
 
 .ic-forms-menu {
@@ -829,18 +901,6 @@ button {
   color: var(--ic-muted);
 }
 
-.ic-log-preview {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  font-size: 13px;
-}
-
-.ic-log-preview li {
-  padding: 4px 0;
-  border-bottom: 1px solid var(--ic-border);
-}
-
 .ic-activation-bar {
   display: flex;
   gap: 8px;
@@ -887,6 +947,13 @@ button {
 .ic-settings {
   padding: 16px;
   max-width: 480px;
+}
+
+.ic-field__hint {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--ic-text-muted, #6b7280);
 }
 
 .ic-field--checkbox {
@@ -941,31 +1008,6 @@ button {
 .ic-activation-pill--closed {
   background: #ecf0f1;
   color: var(--ic-muted);
-}
-
-.ic-grid__calendar {
-  grid-column: span 2;
-}
-
-.ic-cal-widget-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  font-size: 12px;
-  text-align: left;
-}
-
-.ic-cal-widget-list li {
-  padding: 6px 0;
-  border-bottom: 1px solid var(--ic-border);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ic-cal-widget-list span {
-  color: var(--ic-muted);
-  font-size: 11px;
 }
 
 /* Calendar module */
@@ -1205,6 +1247,11 @@ button {
   min-width: 0;
 }
 
+/* When a form is open for editing, collapse the list to a rail and give the editor the room. */
+.ic-forms-split:has(.ic-form-editor--fema) .ic-table-wrap {
+  flex: 0 0 320px;
+}
+
 .ic-form-editor {
   width: 360px;
   flex-shrink: 0;
@@ -1215,10 +1262,9 @@ button {
 }
 
 .ic-form-editor--fema {
-  width: min(52vw, 920px);
-  flex: 1.2;
-  min-width: 480px;
-  background: #d4d4d4;
+  flex: 1;
+  min-width: 520px;
+  background: #e9ecef;
   padding: 20px 24px;
 }
 
@@ -1279,6 +1325,45 @@ button {
   padding: 6px 8px;
   border: 1px solid var(--ic-border);
   border-radius: 3px;
+}
+
+/* Consistent "go back" button used on every top-level page (no browser chrome in
+   the desktop shell). A real click target — padding + border + hover, not bare text. */
+.ic-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px 7px 9px;
+  border: 1px solid var(--ic-border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--ic-surface, #fff);
+  color: var(--ic-text-secondary, #475569);
+  font-size: var(--text-sm, 0.8125rem);
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.ic-back-btn:hover {
+  background: var(--ic-surface-muted, #f8fafc);
+  border-color: var(--ic-border-strong, #cbd5e1);
+  color: var(--ic-text, #0f172a);
+}
+
+.ic-back-btn:active {
+  transform: translateY(0.5px);
+}
+
+.ic-back-btn:focus-visible {
+  outline: 2px solid var(--ic-primary, #0d9488);
+  outline-offset: 2px;
+}
+
+.ic-back-btn__icon {
+  display: inline-flex;
+  margin-top: -1px;
 }
 
 .ic-btn-secondary {
@@ -1752,4 +1837,274 @@ button {
   text-transform: uppercase;
   color: var(--ic-muted);
   margin-bottom: 8px;
+}
+
+/* -------- Custom scrollbars (thin, rounded, subtle) -------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.42);
+  border-radius: 999px;
+  /* transparent border + padding-box clip = inset pill with breathing room */
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(71, 85, 105, 0.65);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Dark map basemap / dark surfaces get a lighter thumb for contrast */
+[data-theme="dark"] *,
+.ic-map--dark * {
+  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+}
+
+[data-theme="dark"] *::-webkit-scrollbar-thumb,
+.ic-map--dark *::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.45);
+}
+
+/* -------- Dashboard weather widget -------- */
+.ic-weather-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ic-weather-widget__main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ic-weather-widget__icon {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.ic-weather-widget__temp {
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.ic-weather-widget__cond {
+  font-size: 0.8125rem;
+  color: var(--ic-muted, #6b7280);
+}
+
+.ic-weather-widget__meta {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.ic-weather-widget__meta li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.ic-weather-widget__meta span {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ic-muted, #6b7280);
+}
+
+.ic-weather-widget__meta strong {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ic-weather-widget__risk {
+  margin: 0;
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.ic-weather-widget__link {
+  align-self: flex-start;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ic-primary, #e2483d);
+  text-decoration: none;
+}
+
+.ic-weather-widget__link:hover {
+  text-decoration: underline;
+}
+
+/* -------- Incident stage toggle (dashboard + situation) -------- */
+.ic-stage-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--ic-surface-2, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.1));
+}
+
+.ic-stage-toggle__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ic-text-muted, #6b7280);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ic-stage-toggle__btn--planning {
+  --stage: #d97706;
+}
+.ic-stage-toggle__btn--activated {
+  --stage: #dc2626;
+}
+.ic-stage-toggle__btn--closed {
+  --stage: #16a34a;
+}
+
+.ic-stage-toggle__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+}
+
+.ic-stage-toggle__btn:hover {
+  color: var(--ic-text, #1e293b);
+}
+
+.ic-stage-toggle__btn--active {
+  background: var(--ic-surface, #fff);
+  color: var(--stage);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+}
+
+.ic-stage-toggle__btn--active .ic-stage-toggle__dot {
+  background: var(--stage);
+  opacity: 1;
+}
+
+.ic-stage-toggle--compact .ic-stage-toggle__btn {
+  padding: 5px 11px;
+  font-size: 0.75rem;
+}
+
+/* -------- Situation screen purpose banner -------- */
+.ic-situation-purpose {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0 0 18px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--ic-surface-2, rgba(37, 99, 235, 0.06));
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.08));
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  max-width: 940px;
+}
+
+.ic-situation-purpose__icon {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+/* Error boundary fallback — a crashed module/page recovers here instead of white-screening. */
+.ic-error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  padding: 40px 24px;
+  min-height: 240px;
+  color: var(--ic-text, #0f172a);
+}
+.ic-error-boundary--page {
+  min-height: 60vh;
+}
+.ic-error-boundary--compact {
+  min-height: 140px;
+  padding: 20px 16px;
+}
+.ic-error-boundary__icon {
+  font-size: 30px;
+  line-height: 1;
+  color: #b45309;
+}
+.ic-error-boundary__title {
+  margin: 4px 0 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.ic-error-boundary__msg {
+  margin: 0;
+  max-width: 420px;
+  font-size: 0.8125rem;
+  color: var(--ic-text-muted, #6b7280);
+}
+.ic-error-boundary__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ic-error-boundary__details {
+  margin-top: 12px;
+  max-width: 520px;
+  font-size: 0.75rem;
+  color: var(--ic-text-muted, #6b7280);
+}
+.ic-error-boundary__details summary {
+  cursor: pointer;
+}
+.ic-error-boundary__details pre {
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--ic-surface-muted, #f8fafc);
+  border: 1px solid var(--ic-border, #e2e8f0);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-top: 6px;
+}
+.ic-error-boundary__ref {
+  font-size: 0.7rem;
+  color: var(--ic-text-muted, #9ca3af);
+  margin-top: 12px;
 }

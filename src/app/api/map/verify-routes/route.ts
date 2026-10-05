@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { enforceRateLimit } from "@/lib/auth/api-rate-limit";
+import { requireSession } from "@/lib/auth/rbac";
 import { verifyAllVariants } from "@/lib/maps/route-verify";
 import type { RouteVariant } from "@/lib/maps/routing-types";
 
@@ -36,6 +38,12 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  // Proxies external routing verification — gate to prevent unauthenticated abuse.
+  const session = await requireSession();
+  if (session instanceof NextResponse) return session;
+  const limited = await enforceRateLimit(`verifyroutes:${session.userId}`, 30, 60);
+  if (limited) return limited;
+
   try {
     const body = bodySchema.parse(await req.json());
     const rows = await verifyAllVariants(

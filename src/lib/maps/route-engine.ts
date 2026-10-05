@@ -4,6 +4,7 @@ import { newId } from "@/lib/incident/id";
 
 import { distanceMeters } from "./geo-utils";
 import { buildGoogleMapsDirectionsUrl } from "./google-maps-url";
+import { planGooglePrimaryVariant } from "./google-routing";
 import {
   corridorOffsetMeters,
   corridorViaFromRoute,
@@ -287,6 +288,7 @@ function variantFromValidated(
     },
     googleMapsUrl: buildGoogleMapsDirectionsUrl(routeOrigin, routeDest, routeVias),
     waypoints: snapped,
+    provider: "osrm",
   };
 }
 
@@ -327,6 +329,18 @@ export async function planRouteVariants(input: PlanRoutesInput): Promise<RouteVa
 
   let primaryValidated: ValidatedRoute | null = null;
 
+  // MAIN ONLINE ENGINE: Google traffic-aware primary. When it returns a route
+  // (keyed + online), it becomes the "standard" variant and the OSRM direct route
+  // below is relabelled as the offline alternate. When Google is null (no key /
+  // offline / no route), OSRM is the primary — the offline backup — as before.
+  const googlePrimary = await planGooglePrimaryVariant(origin, destination);
+  if (googlePrimary) {
+    const sig = geometrySignature(googlePrimary.geojson.geometry);
+    if (sig) seenGeom.add(sig);
+    variants.push(googlePrimary);
+  }
+  const hasGooglePrimary = googlePrimary != null;
+
   const directData = await requestOsrm([origin, destination], true);
   const endpointsSnapOk =
     directData?.code === "Ok" &&
@@ -346,13 +360,25 @@ export async function planRouteVariants(input: PlanRoutesInput): Promise<RouteVa
       if (i === 0) {
         primaryRouteM = validated.route.distance;
         primaryValidated = validated;
-        pushValidated(
-          validated,
-          "standard",
-          "Primary (fastest)",
-          ROUTE_SCENARIO_META.standard.description,
-          [],
-        );
+        // If Google already supplied the online primary, OSRM's direct route is the
+        // offline backup path; otherwise OSRM IS the primary.
+        if (hasGooglePrimary) {
+          pushValidated(
+            validated,
+            "traffic",
+            "OSM route (offline)",
+            "Free-flow OSM driving route — used offline or if Google is unavailable",
+            [],
+          );
+        } else {
+          pushValidated(
+            validated,
+            "standard",
+            "Primary (fastest)",
+            ROUTE_SCENARIO_META.standard.description,
+            [],
+          );
+        }
       } else {
         pushValidated(
           validated,
@@ -373,9 +399,11 @@ export async function planRouteVariants(input: PlanRoutesInput): Promise<RouteVa
       primaryValidated = validated;
       pushValidated(
         validated,
-        "standard",
-        "Primary (fastest)",
-        ROUTE_SCENARIO_META.standard.description,
+        hasGooglePrimary ? "traffic" : "standard",
+        hasGooglePrimary ? "OSM route (offline)" : "Primary (fastest)",
+        hasGooglePrimary
+          ? "Free-flow OSM driving route — used offline or if Google is unavailable"
+          : ROUTE_SCENARIO_META.standard.description,
         [],
       );
     }
@@ -452,5 +480,11 @@ export async function planRouteVariants(input: PlanRoutesInput): Promise<RouteVa
     }
   }
 
-  return variants.sort((a, b) => a.durationSeconds - b.durationSeconds);
+  // Primary (standard) first — even if its live-traffic ETA is slower than a
+  // free-flow alternate — then the rest fastest-first.
+  return variants.sort((a, b) => {
+    if (a.scenario === "standard" && b.scenario !== "standard") return -1;
+    if (b.scenario === "standard" && a.scenario !== "standard") return 1;
+    return a.durationSeconds - b.durationSeconds;
+  });
 }

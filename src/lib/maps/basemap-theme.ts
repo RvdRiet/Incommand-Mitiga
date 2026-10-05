@@ -3,15 +3,18 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  basemapStyleFor,
   contrastBasemapStyle,
   primaryTileUrlForTheme,
   tileZoomForUrl,
+  type MapBasemapLayer,
   type MapBasemapTheme,
 } from "./osm-style";
 
-export type { MapBasemapTheme };
+export type { MapBasemapLayer, MapBasemapTheme };
 
 const STORAGE_KEY = "ic-map-basemap-theme";
+const LAYER_STORAGE_KEY = "ic-map-basemap-layer";
 
 export function tileUrlForTheme(theme: MapBasemapTheme): string {
   return primaryTileUrlForTheme(theme);
@@ -23,6 +26,29 @@ export function tileZoomForTheme(theme: MapBasemapTheme) {
 
 export function mapStyleForTheme(theme: MapBasemapTheme) {
   return contrastBasemapStyle(theme);
+}
+
+/** Style for the given imagery layer (streets/satellite/hybrid) + light/dark theme. */
+export function mapStyleFor(layer: MapBasemapLayer, theme: MapBasemapTheme) {
+  return basemapStyleFor(layer, theme);
+}
+
+export function readStoredMapLayer(): MapBasemapLayer {
+  if (typeof window === "undefined") return "streets";
+  try {
+    const v = localStorage.getItem(LAYER_STORAGE_KEY);
+    return v === "satellite" || v === "hybrid" ? v : "streets";
+  } catch {
+    return "streets";
+  }
+}
+
+export function persistMapLayer(layer: MapBasemapLayer) {
+  try {
+    localStorage.setItem(LAYER_STORAGE_KEY, layer);
+  } catch {
+    /* ignore quota */
+  }
 }
 
 export function readStoredMapTheme(): MapBasemapTheme {

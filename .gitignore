@@ -10,3 +10,12 @@ npm-debug.log*
 coverage
 .turbo
 drizzle/meta
+
+# Electron desktop build output
+dist-electron/
+
+# Generated service worker (from scripts/sw-template.js)
+public/sw.js
+
+# scratch build logs
+scratchpad-*.log

@@ -14,6 +14,9 @@ import {
   useEventsStoreHydrated,
 } from "@/lib/events/store";
 import type { EventRecord, EventStatus } from "@/lib/events/types";
+import { INCIDENT_TEMPLATES, type IncidentTemplate } from "@/lib/events/templates";
+import { IconUsers } from "@/components/dashboard/icons";
+import { IconVideo } from "@/components/ui/icons";
 
 import { EventsTopBar } from "./EventsTopBar";
 
@@ -31,19 +34,55 @@ export function EventsLandingPage() {
   const events = useEventsStore((s) => s.events);
   const createEvent = useEventsStore((s) => s.createEvent);
   const archiveEvent = useEventsStore((s) => s.archiveEvent);
+  const mergeServerEvents = useEventsStore((s) => s.mergeServerEvents);
+
+  // Pull the tenant's incidents from the server so events created on another device
+  // or browser appear here too (the list is otherwise local to each browser).
+  // Best-effort: on failure (offline / signed out) we keep the local list.
+  useEffect(() => {
+    if (!storeHydrated) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/incidents");
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          incidents: { id: string; name: string; createdAt: string | null }[];
+        };
+        if (!cancelled && Array.isArray(data.incidents)) mergeServerEvents(data.incidents);
+      } catch {
+        /* offline / not signed in — keep local events */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [storeHydrated, mergeServerEvents]);
 
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [newEventOpen, setNewEventOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<IncidentTemplate | null>(null);
   const [newEventName, setNewEventName] = useState("");
 
   const active = useMemo(() => getActiveEvents(events), [events]);
   const archived = useMemo(() => getArchivedEvents(events), [events]);
 
-  const startNew = () => {
-    const name = newEventName.trim() || "New Event";
-    const id = createEvent(name);
+  const closeNew = () => {
     setNewEventOpen(false);
+    setSelectedTemplate(null);
     setNewEventName("");
+  };
+
+  const pickTemplate = (template: IncidentTemplate) => {
+    setSelectedTemplate(template);
+    setNewEventName(template.id === "blank" ? "" : template.name);
+  };
+
+  const startNew = () => {
+    if (!selectedTemplate) return;
+    const name = newEventName.trim() || selectedTemplate.name || "New Event";
+    const id = createEvent(name, selectedTemplate.id);
+    closeNew();
     router.push(eventHref(id));
   };
 
@@ -66,6 +105,31 @@ export function EventsLandingPage() {
                 <span className="events-start-btn__icon">+</span>
                 New event
               </button>
+            ) : !selectedTemplate ? (
+              <div className="events-template-picker">
+                <div className="events-template-picker__head">
+                  <strong>Start a new incident</strong>
+                  <button type="button" className="ic-link-btn" onClick={closeNew}>
+                    Cancel
+                  </button>
+                </div>
+                <div className="events-template-grid">
+                  {INCIDENT_TEMPLATES.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className="events-template-tile"
+                      onClick={() => pickTemplate(t)}
+                    >
+                      <span className="events-template-tile__icon" aria-hidden>
+                        {t.icon}
+                      </span>
+                      <span className="events-template-tile__name">{t.name}</span>
+                      <span className="events-template-tile__blurb">{t.blurb}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             ) : (
               <form
                 className="events-new-form"
@@ -74,21 +138,36 @@ export function EventsLandingPage() {
                   startNew();
                 }}
               >
+                <span className="events-new-form__icon" aria-hidden>
+                  {selectedTemplate.icon}
+                </span>
                 <input
                   type="text"
-                  placeholder="Event name"
+                  placeholder="Incident name"
                   value={newEventName}
                   onChange={(e) => setNewEventName(e.target.value)}
                   autoFocus
                 />
                 <button type="submit" className="ic-btn-add">
-                  Create
+                  Start Incident
                 </button>
-                <button type="button" className="ic-link-btn" onClick={() => setNewEventOpen(false)}>
-                  Cancel
+                <button
+                  type="button"
+                  className="ic-link-btn"
+                  onClick={() => setSelectedTemplate(null)}
+                >
+                  Back
                 </button>
               </form>
             )}
+            <Link href="/roster" className="events-registry-btn" title="Manage your org-wide staff roster">
+              <span className="events-registry-btn__icon" aria-hidden><IconUsers /></span>
+              Personnel roster
+            </Link>
+            <Link href="/devices" className="events-registry-btn" title="Manage bodycams reusable across incidents">
+              <span className="events-registry-btn__icon" aria-hidden><IconVideo /></span>
+              Device registry
+            </Link>
           </div>
 
           <h2 className="events-section-title">Active events</h2>
@@ -148,10 +227,14 @@ function EventRow({
     <li className="events-row">
       <Link href={eventHref(event.id)} className="events-row__link">
         <span className="events-row__icon" aria-hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
+          {event.icon ? (
+            <span className="events-row__icon-emoji">{event.icon}</span>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          )}
         </span>
         <span className="events-row__body">
           <strong>{event.name}</strong>
@@ -182,19 +265,14 @@ function EventRow({
 }
 
 function StatusChip({ status }: { status: EventStatus }) {
+  // Badge diet: only "Activated" is an attention state that earns a chip. Planning,
+  // closed, and no-status read as plain text so activated events actually stand out.
+  if (status === "activated") {
+    return <span className="events-status-chip events-status-chip--activated">Activated</span>;
+  }
   const label =
-    status === "planning"
-      ? "Planning"
-      : status === "activated"
-        ? "Activated"
-        : status === "closed"
-          ? "Closed"
-          : "No status";
-  const chipClass =
-    status === "none"
-      ? "events-status-chip"
-      : `events-status-chip events-status-chip--${status}`;
-  return <span className={chipClass}>{label}</span>;
+    status === "planning" ? "Planning" : status === "closed" ? "Closed" : "No status";
+  return <span className="events-status-plain">{label}</span>;
 }
 
 function EventTimer({ startDate }: { startDate: string }) {

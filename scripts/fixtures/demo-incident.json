@@ -1,0 +1,1827 @@
+{
+  "id": "27657899-5135-4bf2-ba50-1e36a2e6dcb6",
+  "incident": {
+    "name": "Coastal Storm & Flood — DEMO",
+    "status": "planning",
+    "severity": "moderate",
+    "isExercise": false,
+    "description": null
+  },
+  "stateRev": "5",
+  "modules": [
+    {
+      "slug": "calendar",
+      "rev": "5",
+      "state": {
+        "calendarEvents": [
+          {
+            "id": "ce1",
+            "type": "briefing",
+            "endAt": "2026-08-27T10:46:21.834Z",
+            "title": "Command briefing",
+            "allDay": false,
+            "startAt": "2026-08-27T10:16:21.834Z",
+            "location": "JOC",
+            "description": "OP2 kickoff",
+            "operationalPeriodId": "op2"
+          },
+          {
+            "id": "ce2",
+            "type": "operational_period",
+            "endAt": "2026-08-27T23:16:21.834Z",
+            "title": "Operational Period 2",
+            "allDay": false,
+            "startAt": "2026-08-27T11:16:21.834Z",
+            "location": "",
+            "description": "Overnight ops",
+            "operationalPeriodId": "op2"
+          },
+          {
+            "id": "ce3",
+            "type": "meeting",
+            "endAt": "2026-08-27T15:46:21.834Z",
+            "title": "Shift change",
+            "allDay": false,
+            "startAt": "2026-08-27T15:16:21.834Z",
+            "location": "",
+            "description": "",
+            "operationalPeriodId": null
+          }
+        ],
+        "operationalPeriods": [
+          {
+            "id": "op1",
+            "name": "OP1 — Initial response",
+            "endsAt": "2026-08-27T07:16:21.834Z",
+            "number": 1,
+            "startsAt": "2026-08-26T13:16:21.834Z",
+            "objectives": "Life safety, shelter activation"
+          },
+          {
+            "id": "op2",
+            "name": "OP2 — Overnight",
+            "endsAt": "2026-08-27T19:16:21.834Z",
+            "number": 2,
+            "startsAt": "2026-08-27T07:16:21.834Z",
+            "objectives": "Sustain shelters, restore power, dewatering"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "certifications",
+      "rev": "5",
+      "state": {
+        "certifications": [
+          {
+            "id": "cert1",
+            "name": "Advanced Life Support",
+            "note": "Expiring soon",
+            "level": "ALS",
+            "issuer": "HPCSA",
+            "issuedAt": "2025-01-04T09:16:21.834Z",
+            "expiresAt": "2026-09-16T09:16:21.834Z",
+            "reference": "ALS-2291",
+            "personnelId": "p4"
+          },
+          {
+            "id": "cert2",
+            "name": "Incident Command System",
+            "level": "ICS-400",
+            "issuer": "NDMC",
+            "issuedAt": "2025-07-23T09:16:21.834Z",
+            "expiresAt": "2027-10-01T09:16:21.834Z",
+            "reference": "ICS-400-112",
+            "personnelId": "p1"
+          },
+          {
+            "id": "cert3",
+            "name": "Swift Water Rescue",
+            "level": "Level 3",
+            "issuer": "RescueSA",
+            "issuedAt": "2026-02-08T09:16:21.834Z",
+            "expiresAt": "2027-02-03T09:16:21.834Z",
+            "reference": "SWR-3-88",
+            "personnelId": "p5"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "comms",
+      "rev": "5",
+      "state": {
+        "pages": [
+          {
+            "id": "pg1",
+            "body": "All Woodstock units — sweep complete, confirm all clear",
+            "sentBy": "J. Naidoo",
+            "channelId": "c2",
+            "createdAt": "2026-08-27T09:04:21.834Z",
+            "recipients": [
+              {
+                "status": "ack",
+                "unitId": "u1",
+                "callsign": "Alpha-1",
+                "updatedAt": "2026-08-27T09:05:21.834Z"
+              },
+              {
+                "status": "delivered",
+                "unitId": "u2",
+                "callsign": "Bravo-2",
+                "updatedAt": "2026-08-27T09:05:21.834Z"
+              }
+            ],
+            "channelName": "Tactical 1"
+          }
+        ],
+        "channels": [
+          {
+            "id": "c1",
+            "mode": "open_net",
+            "name": "Command Net",
+            "color": "#2563eb",
+            "sipRoom": null,
+            "function": "Command & coordination",
+            "videoRoom": null,
+            "pageEnabled": true,
+            "sourceRowId": null,
+            "sourceFormId": "f3"
+          },
+          {
+            "id": "c2",
+            "mode": "ptt",
+            "name": "Tactical 1",
+            "color": "#16a34a",
+            "sipRoom": null,
+            "function": "Woodstock ops",
+            "videoRoom": null,
+            "pageEnabled": true,
+            "sourceRowId": null,
+            "sourceFormId": "f3"
+          }
+        ],
+        "fieldUnits": [
+          {
+            "id": "u1",
+            "lat": -33.925,
+            "lng": 18.446,
+            "status": "assigned",
+            "callsign": "Alpha-1",
+            "deviceId": "d1",
+            "channelId": "c2",
+            "personnelId": "p2"
+          },
+          {
+            "id": "u2",
+            "lat": -33.926,
+            "lng": 18.448,
+            "status": "assigned",
+            "callsign": "Bravo-2",
+            "deviceId": "d2",
+            "channelId": "c2",
+            "personnelId": null
+          },
+          {
+            "id": "u3",
+            "lat": -33.929,
+            "lng": 18.423,
+            "status": "available",
+            "callsign": "Medic-1",
+            "deviceId": "d3",
+            "channelId": "c1",
+            "personnelId": "p4"
+          },
+          {
+            "id": "u4",
+            "lat": -33.914,
+            "lng": 18.386,
+            "status": "offline",
+            "callsign": "Recon-4",
+            "deviceId": "d4",
+            "channelId": "c1",
+            "personnelId": null
+          }
+        ],
+        "distressEvents": [
+          {
+            "id": "de1",
+            "lat": -33.926,
+            "lng": 18.448,
+            "kind": "man_down",
+            "source": "manual",
+            "status": "active",
+            "unitId": "u2",
+            "channelId": "c2",
+            "triggeredAt": "2026-08-27T09:10:21.834Z",
+            "unitCallsign": "Bravo-2"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "__core__",
+      "rev": "5",
+      "state": {
+        "settings": {
+          "timezone": "Africa/Johannesburg",
+          "maxOnDuty24h": 16,
+          "minRestHours": 8,
+          "maxShiftHours": 12,
+          "certReminderDays": 30,
+          "enablePublicPortal": true,
+          "deviceOfflineAfterSec": 60,
+          "inventoryReminderDays": 30,
+          "defaultActivationLevel": "activated"
+        }
+      }
+    },
+    {
+      "slug": "damage-assessment",
+      "rev": "5",
+      "state": {
+        "damages": [
+          {
+            "id": "dm1",
+            "lat": -33.914,
+            "lng": 18.384,
+            "name": "Sea Point promenade wall",
+            "status": "severe",
+            "description": "Storm surge breach, 40m section collapsed",
+            "estimatedCost": 2500000
+          },
+          {
+            "id": "dm2",
+            "lat": -33.926,
+            "lng": 18.445,
+            "name": "Woodstock pumpstation",
+            "status": "severe",
+            "description": "Flooded, electrics submerged",
+            "estimatedCost": 850000
+          },
+          {
+            "id": "dm3",
+            "lat": -33.927,
+            "lng": 18.465,
+            "name": "Salt River market roof",
+            "status": "minor",
+            "description": "Partial roof loss",
+            "estimatedCost": 120000
+          },
+          {
+            "id": "dm4",
+            "lat": -33.906,
+            "lng": 18.408,
+            "name": "Green Point substation",
+            "status": "assessing",
+            "description": "Under assessment",
+            "estimatedCost": 0
+          }
+        ]
+      }
+    },
+    {
+      "slug": "forms",
+      "rev": "5",
+      "state": {
+        "forms": [
+          {
+            "id": "f1",
+            "name": "Incident Briefing",
+            "inIap": true,
+            "pdfUrl": null,
+            "status": "published",
+            "content": "",
+            "savedAt": "2026-08-27T08:16:21.834Z",
+            "filledBy": "A. Mbeki",
+            "folderId": null,
+            "formType": "briefing",
+            "formNumber": "201",
+            "modifiedAt": "2026-08-27T08:16:21.834Z",
+            "templateId": "ICS-201",
+            "officialTitle": "Incident Briefing (ICS 201)"
+          },
+          {
+            "id": "f2",
+            "name": "Incident Objectives",
+            "inIap": true,
+            "pdfUrl": null,
+            "status": "published",
+            "content": "",
+            "savedAt": "2026-08-27T08:26:21.834Z",
+            "filledBy": "A. Mbeki",
+            "folderId": null,
+            "formType": "objectives",
+            "formNumber": "202",
+            "modifiedAt": "2026-08-27T08:26:21.834Z",
+            "templateId": "ICS-202",
+            "officialTitle": "Incident Objectives (ICS 202)"
+          },
+          {
+            "id": "f3",
+            "name": "Communications Plan",
+            "inIap": false,
+            "pdfUrl": null,
+            "status": "draft",
+            "content": "",
+            "savedAt": "2026-08-27T08:31:21.834Z",
+            "filledBy": "S. Botha",
+            "folderId": null,
+            "formType": "comms",
+            "formNumber": "205",
+            "modifiedAt": "2026-08-27T08:31:21.834Z",
+            "templateId": "ICS-205",
+            "officialTitle": "Incident Radio Communications Plan (ICS 205)"
+          }
+        ],
+        "customForms": [
+          {
+            "id": "cf1",
+            "kind": "survey",
+            "name": "Rapid damage survey",
+            "fields": [
+              {
+                "id": "q1",
+                "type": "text",
+                "label": "Address / location",
+                "required": true
+              },
+              {
+                "id": "q2",
+                "type": "radio",
+                "label": "Severity",
+                "options": [
+                  "None",
+                  "Minor",
+                  "Severe",
+                  "Destroyed"
+                ],
+                "required": true
+              },
+              {
+                "id": "q3",
+                "type": "checklist",
+                "label": "Utilities affected",
+                "options": [
+                  "Power",
+                  "Water",
+                  "Gas",
+                  "Comms"
+                ]
+              },
+              {
+                "id": "q4",
+                "type": "textarea",
+                "label": "Notes"
+              }
+            ],
+            "status": "published",
+            "createdAt": "2026-08-27T07:46:21.834Z",
+            "responses": [
+              {
+                "id": "re1",
+                "values": {
+                  "q1": "12 Sir Lowry Rd",
+                  "q2": "Severe",
+                  "q3": [
+                    "Power",
+                    "Water"
+                  ],
+                  "q4": "Roof partially collapsed"
+                },
+                "submittedAt": "2026-08-27T08:51:21.834Z",
+                "submittedBy": "Team Alpha"
+              },
+              {
+                "id": "re2",
+                "values": {
+                  "q1": "Salt River Market",
+                  "q2": "Minor",
+                  "q3": [
+                    "Power"
+                  ]
+                },
+                "submittedAt": "2026-08-27T09:04:21.834Z",
+                "submittedBy": "Team Bravo"
+              }
+            ],
+            "modifiedAt": "2026-08-27T09:04:21.834Z",
+            "description": "Field teams log structural damage"
+          },
+          {
+            "id": "cf2",
+            "kind": "checklist",
+            "name": "Shelter opening checklist",
+            "fields": [
+              {
+                "id": "c1",
+                "type": "checkbox",
+                "label": "Building safety confirmed"
+              },
+              {
+                "id": "c2",
+                "type": "checkbox",
+                "label": "Registration desk set up"
+              },
+              {
+                "id": "c3",
+                "type": "checkbox",
+                "label": "Bedding & water on site"
+              },
+              {
+                "id": "c4",
+                "type": "number",
+                "label": "Beds available"
+              }
+            ],
+            "status": "published",
+            "createdAt": "2026-08-27T07:56:21.834Z",
+            "responses": [
+              {
+                "id": "re3",
+                "values": {
+                  "c1": true,
+                  "c2": true,
+                  "c3": true,
+                  "c4": "150"
+                },
+                "submittedAt": "2026-08-27T08:41:21.834Z",
+                "submittedBy": "S. Botha"
+              }
+            ],
+            "modifiedAt": "2026-08-27T08:41:21.834Z"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "inventory",
+      "rev": "5",
+      "state": {
+        "inventory": [
+          {
+            "id": "inv1",
+            "name": "Sandbags",
+            "unit": "bags",
+            "notes": "Below par — reorder",
+            "serial": "",
+            "category": "relief",
+            "location": "Culemborg depot",
+            "quantity": 1200,
+            "condition": "serviceable",
+            "expiryDate": "",
+            "minQuantity": 2000,
+            "lastInspection": "",
+            "inspectionIntervalDays": 0
+          },
+          {
+            "id": "inv2",
+            "name": "Emergency blankets",
+            "unit": "units",
+            "notes": "",
+            "serial": "",
+            "category": "relief",
+            "location": "Good Hope store",
+            "quantity": 800,
+            "condition": "serviceable",
+            "expiryDate": "",
+            "minQuantity": 300,
+            "lastInspection": "",
+            "inspectionIntervalDays": 0
+          },
+          {
+            "id": "inv3",
+            "name": "Water purification tablets",
+            "unit": "tablets",
+            "notes": "Expiring soon",
+            "serial": "",
+            "category": "medical",
+            "location": "Medical cache",
+            "quantity": 5000,
+            "condition": "serviceable",
+            "expiryDate": "2026-09-11T09:16:21.834Z",
+            "minQuantity": 1000,
+            "lastInspection": "",
+            "inspectionIntervalDays": 0
+          },
+          {
+            "id": "inv4",
+            "name": "Portable pump (Honda WB30)",
+            "unit": "units",
+            "notes": "Service due",
+            "serial": "PMP-0042",
+            "category": "rescue",
+            "location": "Fleet",
+            "quantity": 6,
+            "condition": "monitor",
+            "expiryDate": "",
+            "minQuantity": 0,
+            "lastInspection": "2026-02-08T09:16:21.834Z",
+            "inspectionIntervalDays": 180
+          }
+        ]
+      }
+    },
+    {
+      "slug": "library",
+      "rev": "5",
+      "state": {
+        "library": [
+          {
+            "id": "lib1",
+            "name": "City DRM Contingency Plan.pdf",
+            "category": "document",
+            "modifiedAt": "2026-08-27T04:16:21.834Z"
+          },
+          {
+            "id": "lib2",
+            "name": "Flood Evacuation Playbook.pdf",
+            "category": "play",
+            "modifiedAt": "2026-08-27T00:56:21.834Z"
+          },
+          {
+            "id": "lib3",
+            "name": "Shelter Operations SOP.docx",
+            "category": "document",
+            "modifiedAt": "2026-08-26T21:36:21.834Z"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "logs",
+      "rev": "5",
+      "state": {
+        "logs": [
+          {
+            "id": "19d6a49e-ef31-4a06-824c-30a96344d8b3",
+            "kind": "data",
+            "tags": [
+              "activity",
+              "data",
+              "store"
+            ],
+            "author": "System",
+            "detail": "routes +2 (now 2)",
+            "target": "incident state",
+            "message": "Data changed",
+            "createdAt": "2026-08-27T09:48:05.077Z"
+          },
+          {
+            "id": "84eba941-b969-45c9-a17c-67715b22e7ec",
+            "kind": "data",
+            "tags": [
+              "activity",
+              "data",
+              "store"
+            ],
+            "author": "System",
+            "detail": "status board updated",
+            "target": "incident state",
+            "message": "Data changed",
+            "createdAt": "2026-08-27T09:47:44.353Z"
+          },
+          {
+            "id": "bc96f356-24e5-4c4b-a414-94590e0d883c",
+            "kind": "navigation",
+            "tags": [
+              "activity",
+              "navigation"
+            ],
+            "author": "Operator",
+            "target": "/events/27657899-5135-4bf2-ba50-1e36a2e6dcb6/dashboard",
+            "message": "Page viewed",
+            "createdAt": "2026-08-27T09:17:05.062Z"
+          },
+          {
+            "id": "f0d79e3b-f8e9-401a-bb12-67e59645086d",
+            "kind": "data",
+            "tags": [
+              "activity",
+              "data",
+              "store"
+            ],
+            "author": "System",
+            "detail": "situation.startDate=2026-08-26T13:16:21.834Z · situation.location=Cape Town CBD & Atlantic Seaboard · situation.summary=Severe Atlantic cold front: 90 km/h gusts, 4-5 m swells and heavy rain flooding low-lying areas (Woodstock, Salt River).… · situation.objectives=1. Life safety — evacuate flood-risk zones 2. Open and staff shelters 3. Restore power & clear priority routes 4. Protec… · situation.keyContacts=City DRM Duty Officer 021-590-1900 · SAWS Regional 021-935-1100 · Eskom 08600-37566 · situation.activationLevel=activated · personnel +6 (now 6) · forms +1 (now 3) · task lists +2 (now 2) · damages +4 (now 4) · residents +3 (now 3) · resident areas +2 (now 2) · resource requests +4 (now 4) · road damages +3 (now 3) · shelters +3 (now 3) · utilities +2 (now 2) · library +3 (now 3) · map layers +4 (now 4) · calendar +3 (now 3) · operational periods +2 (now 2) · notifications +2 (now 2) · contacts -1 (now 2) · settings.timezone=Africa/Johannesburg · settings.defaultActivationLevel=activated · settings.enablePublicPortal=true · role groups -2 (now 2) · roles +7 (now 7) · status board updated",
+            "target": "incident state",
+            "message": "Data changed",
+            "createdAt": "2026-08-27T09:16:21.837Z"
+          },
+          {
+            "id": "l1",
+            "kind": "system",
+            "tags": [
+              "distress"
+            ],
+            "author": "System",
+            "message": "Distress — Bravo-2 man-down at Woodstock pumpstation",
+            "createdAt": "2026-08-27T09:10:21.834Z"
+          },
+          {
+            "id": "l2",
+            "kind": "user",
+            "tags": [
+              "roads"
+            ],
+            "author": "J. Naidoo",
+            "message": "Beach Rd (Sea Point) closed — storm surge overtopping",
+            "createdAt": "2026-08-27T08:54:21.834Z"
+          },
+          {
+            "id": "l3",
+            "kind": "user",
+            "tags": [
+              "shelters"
+            ],
+            "author": "S. Botha",
+            "message": "Good Hope Centre shelter opened, staffed by Red Cross",
+            "createdAt": "2026-08-27T08:41:21.834Z"
+          },
+          {
+            "id": "l4",
+            "kind": "data",
+            "tags": [
+              "utilities"
+            ],
+            "author": "L. van Wyk",
+            "message": "Eskom reports Zone 3 substation trip — 6,200 without power",
+            "createdAt": "2026-08-27T08:28:21.834Z"
+          },
+          {
+            "id": "l5",
+            "kind": "user",
+            "tags": [
+              "resources"
+            ],
+            "author": "Logistics",
+            "message": "2x SANDF high-water vehicles dispatched to Salt River",
+            "createdAt": "2026-08-27T09:01:21.834Z"
+          },
+          {
+            "id": "l6",
+            "kind": "user",
+            "tags": [
+              "planning"
+            ],
+            "author": "A. Mbeki",
+            "message": "OP2 objectives briefed; shift change at 06:00",
+            "createdAt": "2026-08-27T08:06:21.834Z"
+          },
+          {
+            "id": "l7",
+            "kind": "user",
+            "tags": [
+              "medical"
+            ],
+            "author": "T. Dlamini",
+            "message": "Triage point established at Good Hope Centre",
+            "createdAt": "2026-08-27T08:48:21.834Z"
+          },
+          {
+            "id": "l8",
+            "kind": "system",
+            "tags": [
+              "command"
+            ],
+            "author": "System",
+            "message": "Incident activated to Level 2 — City JOC stood up",
+            "createdAt": "2026-08-26T13:16:21.834Z"
+          }
+        ],
+        "audit": [
+          {
+            "id": "44c2d9e8-a440-4b8e-a04f-85cf49aa55d6",
+            "actor": "System",
+            "action": "Data changed — routes +2 (now 2)",
+            "createdAt": "2026-08-27T09:48:05.077Z"
+          },
+          {
+            "id": "1267adac-8aef-4be6-aab2-88affbbcd1ce",
+            "actor": "System",
+            "action": "Data changed — status board updated",
+            "createdAt": "2026-08-27T09:47:44.353Z"
+          },
+          {
+            "id": "5fe45d4f-5620-479a-8763-c6f22fa7029d",
+            "actor": "Operator",
+            "action": "Page viewed",
+            "createdAt": "2026-08-27T09:17:05.062Z"
+          },
+          {
+            "id": "df172e86-a65c-46d4-b967-429687a74071",
+            "actor": "System",
+            "action": "Data changed — situation.startDate=2026-08-26T13:16:21.834Z · situation.location=Cape Town CBD & Atlantic Seaboard · situation.summary=Severe Atlantic cold front: 90 km/h gusts, 4-5 m swells and heavy…",
+            "createdAt": "2026-08-27T09:16:21.837Z"
+          },
+          {
+            "id": "a1",
+            "actor": "A. Mbeki",
+            "action": "auth.login",
+            "createdAt": "2026-08-26T13:16:21.834Z"
+          },
+          {
+            "id": "a2",
+            "actor": "A. Mbeki",
+            "action": "incident.activated",
+            "createdAt": "2026-08-26T13:18:21.834Z"
+          },
+          {
+            "id": "a3",
+            "actor": "J. Naidoo",
+            "action": "form.saved",
+            "createdAt": "2026-08-27T08:16:21.834Z"
+          },
+          {
+            "id": "4a5b0773-bc91-4bee-b8bf-da1e2ebc3584",
+            "actor": "System",
+            "action": "Situation updated: name, lat, lng, startDate",
+            "createdAt": "2026-08-27T09:17:05.179Z"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "map",
+      "rev": "5",
+      "state": {
+        "supplyRoutes": [
+          {
+            "id": "sr1",
+            "name": "Relief convoy — Depot → Good Hope",
+            "origin": {
+              "lat": -33.928,
+              "lng": 18.458,
+              "label": "Culemborg staging depot"
+            },
+            "status": "active",
+            "purpose": "Blankets, water & bedding to the main shelter",
+            "variants": [
+              {
+                "id": "v1",
+                "label": "Fastest",
+                "geojson": {
+                  "type": "Feature",
+                  "geometry": {
+                    "type": "LineString",
+                    "coordinates": [
+                      [
+                        18.458,
+                        -33.928
+                      ],
+                      [
+                        18.446,
+                        -33.93
+                      ],
+                      [
+                        18.44,
+                        -33.9295
+                      ],
+                      [
+                        18.43,
+                        -33.929
+                      ],
+                      [
+                        18.423,
+                        -33.929
+                      ]
+                    ]
+                  },
+                  "properties": {}
+                },
+                "scenario": "standard",
+                "waypoints": [
+                  {
+                    "lat": -33.928,
+                    "lng": 18.458,
+                    "label": "Culemborg staging depot"
+                  },
+                  {
+                    "lat": -33.929,
+                    "lng": 18.423,
+                    "label": "Good Hope Centre"
+                  }
+                ],
+                "description": "Via Nelson Mandela Blvd",
+                "googleMapsUrl": "https://www.google.com/maps/dir/?api=1&origin=-33.928%2C18.458&destination=-33.929%2C18.423&travelmode=driving",
+                "distanceMeters": 4200,
+                "durationSeconds": 540
+              }
+            ],
+            "createdAt": "2026-08-27T09:08:21.124Z",
+            "updatedAt": "2026-08-27T09:38:21.124Z",
+            "viaPoints": [],
+            "destination": {
+              "lat": -33.929,
+              "lng": 18.423,
+              "label": "Good Hope Centre"
+            },
+            "briefingNotes": "Convoy of 3 trucks, escort by Alpha-1. ETA 21:15.",
+            "midJourneyOrigin": null,
+            "avoidAnnotationId": null,
+            "selectedVariantId": "v1"
+          },
+          {
+            "id": "sr2",
+            "name": "Medical resupply — JOC → Woodstock",
+            "origin": {
+              "lat": -33.918,
+              "lng": 18.4233,
+              "label": "JOC (CBD)"
+            },
+            "status": "planning",
+            "purpose": "ALS kit + water tablets to triage point (avoid flood zone)",
+            "variants": [
+              {
+                "id": "v2",
+                "label": "Flood diversion",
+                "geojson": {
+                  "type": "Feature",
+                  "geometry": {
+                    "type": "LineString",
+                    "coordinates": [
+                      [
+                        18.4233,
+                        -33.918
+                      ],
+                      [
+                        18.43,
+                        -33.9195
+                      ],
+                      [
+                        18.436,
+                        -33.92
+                      ],
+                      [
+                        18.442,
+                        -33.9235
+                      ],
+                      [
+                        18.446,
+                        -33.926
+                      ]
+                    ]
+                  },
+                  "properties": {}
+                },
+                "scenario": "diversion",
+                "waypoints": [
+                  {
+                    "lat": -33.918,
+                    "lng": 18.4233,
+                    "label": "JOC (CBD)"
+                  },
+                  {
+                    "lat": -33.92,
+                    "lng": 18.436,
+                    "label": "Via"
+                  },
+                  {
+                    "lat": -33.926,
+                    "lng": 18.446,
+                    "label": "Woodstock shelter"
+                  }
+                ],
+                "description": "Avoids the Evacuation zone; longer but dry",
+                "googleMapsUrl": "https://www.google.com/maps/dir/?api=1&origin=-33.918%2C18.4233&destination=-33.926%2C18.446&travelmode=driving",
+                "distanceMeters": 3100,
+                "durationSeconds": 600
+              }
+            ],
+            "createdAt": "2026-08-27T09:28:21.124Z",
+            "updatedAt": "2026-08-27T09:43:21.124Z",
+            "viaPoints": [
+              {
+                "lat": -33.92,
+                "lng": 18.436,
+                "label": "Via Sir Lowry Rd"
+              }
+            ],
+            "destination": {
+              "lat": -33.926,
+              "lng": 18.446,
+              "label": "Woodstock shelter"
+            },
+            "briefingNotes": "Diversion around Woodstock flood zone. Recon-4 to confirm passable.",
+            "midJourneyOrigin": null,
+            "avoidAnnotationId": "an1",
+            "selectedVariantId": "v2"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "map-annotations",
+      "rev": "5",
+      "state": {
+        "mapAnnotations": [
+          {
+            "id": "an1",
+            "kind": "polygon",
+            "name": "Evacuation zone — Woodstock",
+            "color": "#e11d48",
+            "geojson": {
+              "type": "FeatureCollection",
+              "features": [
+                {
+                  "type": "Feature",
+                  "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                      [
+                        [
+                          18.44,
+                          -33.922
+                        ],
+                        [
+                          18.452,
+                          -33.922
+                        ],
+                        [
+                          18.452,
+                          -33.93
+                        ],
+                        [
+                          18.44,
+                          -33.93
+                        ],
+                        [
+                          18.44,
+                          -33.922
+                        ]
+                      ]
+                    ]
+                  },
+                  "properties": {}
+                }
+              ]
+            }
+          },
+          {
+            "id": "an2",
+            "kind": "circle",
+            "name": "Command radius",
+            "color": "#2563eb",
+            "geojson": {
+              "type": "FeatureCollection",
+              "features": [
+                {
+                  "type": "Feature",
+                  "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                      [
+                        [
+                          18.436290182164253,
+                          -33.918
+                        ],
+                        [
+                          18.43584755244065,
+                          -33.915209999513806
+                        ],
+                        [
+                          18.43454982775403,
+                          -33.91261013295005
+                        ],
+                        [
+                          18.432485445897193,
+                          -33.91037757691858
+                        ],
+                        [
+                          18.429795091082127,
+                          -33.90866447642345
+                        ],
+                        [
+                          18.42666210654346,
+                          -33.907587576432384
+                        ],
+                        [
+                          18.4233,
+                          -33.90722026590011
+                        ],
+                        [
+                          18.41993789345654,
+                          -33.907587576432384
+                        ],
+                        [
+                          18.416804908917875,
+                          -33.90866447642345
+                        ],
+                        [
+                          18.41411455410281,
+                          -33.91037757691858
+                        ],
+                        [
+                          18.412050172245973,
+                          -33.91261013295005
+                        ],
+                        [
+                          18.410752447559354,
+                          -33.915209999513806
+                        ],
+                        [
+                          18.41030981783575,
+                          -33.918
+                        ],
+                        [
+                          18.410752447559354,
+                          -33.92079000048619
+                        ],
+                        [
+                          18.412050172245973,
+                          -33.92338986704995
+                        ],
+                        [
+                          18.41411455410281,
+                          -33.92562242308142
+                        ],
+                        [
+                          18.416804908917875,
+                          -33.927335523576545
+                        ],
+                        [
+                          18.41993789345654,
+                          -33.928412423567615
+                        ],
+                        [
+                          18.4233,
+                          -33.92877973409989
+                        ],
+                        [
+                          18.42666210654346,
+                          -33.928412423567615
+                        ],
+                        [
+                          18.429795091082127,
+                          -33.927335523576545
+                        ],
+                        [
+                          18.432485445897193,
+                          -33.92562242308142
+                        ],
+                        [
+                          18.43454982775403,
+                          -33.92338986704995
+                        ],
+                        [
+                          18.43584755244065,
+                          -33.92079000048619
+                        ],
+                        [
+                          18.436290182164253,
+                          -33.918
+                        ]
+                      ]
+                    ]
+                  },
+                  "properties": {}
+                }
+              ]
+            },
+            "radiusMeters": 1200
+          },
+          {
+            "id": "an3",
+            "kind": "polygon",
+            "name": "Staging area — Culemborg",
+            "color": "#16a34a",
+            "geojson": {
+              "type": "FeatureCollection",
+              "features": [
+                {
+                  "type": "Feature",
+                  "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                      [
+                        [
+                          18.455,
+                          -33.925
+                        ],
+                        [
+                          18.462,
+                          -33.925
+                        ],
+                        [
+                          18.462,
+                          -33.931
+                        ],
+                        [
+                          18.455,
+                          -33.931
+                        ],
+                        [
+                          18.455,
+                          -33.925
+                        ]
+                      ]
+                    ]
+                  },
+                  "properties": {}
+                }
+              ]
+            }
+          },
+          {
+            "id": "an4",
+            "kind": "circle",
+            "name": "Storm-surge risk line",
+            "color": "#d97706",
+            "geojson": {
+              "type": "FeatureCollection",
+              "features": [
+                {
+                  "type": "Feature",
+                  "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                      [
+                        [
+                          18.39149478620446,
+                          -33.914
+                        ],
+                        [
+                          18.391273481731115,
+                          -33.91260499975691
+                        ],
+                        [
+                          18.390624649845215,
+                          -33.91130506647503
+                        ],
+                        [
+                          18.38959250736753,
+                          -33.910188788459294
+                        ],
+                        [
+                          18.388247393102233,
+                          -33.909332238211725
+                        ],
+                        [
+                          18.386680974363586,
+                          -33.908793788216194
+                        ],
+                        [
+                          18.385,
+                          -33.90861013295005
+                        ],
+                        [
+                          18.383319025636418,
+                          -33.908793788216194
+                        ],
+                        [
+                          18.38175260689777,
+                          -33.909332238211725
+                        ],
+                        [
+                          18.38040749263247,
+                          -33.910188788459294
+                        ],
+                        [
+                          18.37937535015479,
+                          -33.91130506647503
+                        ],
+                        [
+                          18.378726518268888,
+                          -33.91260499975691
+                        ],
+                        [
+                          18.378505213795542,
+                          -33.914
+                        ],
+                        [
+                          18.378726518268888,
+                          -33.915395000243095
+                        ],
+                        [
+                          18.37937535015479,
+                          -33.91669493352497
+                        ],
+                        [
+                          18.38040749263247,
+                          -33.91781121154071
+                        ],
+                        [
+                          18.38175260689777,
+                          -33.91866776178828
+                        ],
+                        [
+                          18.383319025636418,
+                          -33.91920621178381
+                        ],
+                        [
+                          18.385,
+                          -33.91938986704995
+                        ],
+                        [
+                          18.386680974363586,
+                          -33.91920621178381
+                        ],
+                        [
+                          18.388247393102233,
+                          -33.91866776178828
+                        ],
+                        [
+                          18.38959250736753,
+                          -33.91781121154071
+                        ],
+                        [
+                          18.390624649845215,
+                          -33.91669493352497
+                        ],
+                        [
+                          18.391273481731115,
+                          -33.915395000243095
+                        ],
+                        [
+                          18.39149478620446,
+                          -33.914
+                        ]
+                      ]
+                    ]
+                  },
+                  "properties": {}
+                }
+              ]
+            },
+            "radiusMeters": 600
+          }
+        ]
+      }
+    },
+    {
+      "slug": "notifications",
+      "rev": "5",
+      "state": {
+        "contactGroups": [
+          {
+            "id": "cg1",
+            "name": "Command team",
+            "members": "A. Mbeki, J. Naidoo, S. Botha, R. Adams",
+            "description": "IC + section chiefs"
+          },
+          {
+            "id": "cg2",
+            "name": "Shelter managers",
+            "members": "Good Hope, Woodstock, Sea Point",
+            "description": "On-site leads"
+          }
+        ],
+        "notifications": [
+          {
+            "id": "nt1",
+            "body": "Residents in the flood zone must move to Good Hope Centre.",
+            "status": "sent",
+            "subject": "Evacuation advisory — Woodstock",
+            "channels": [
+              "sms",
+              "email"
+            ],
+            "groupIds": [
+              "cg2"
+            ],
+            "createdAt": "2026-08-27T08:46:21.834Z"
+          },
+          {
+            "id": "nt2",
+            "body": "OP2 teams report to JOC 05:30.",
+            "status": "queued",
+            "subject": "Shift change 06:00",
+            "channels": [
+              "email"
+            ],
+            "groupIds": [
+              "cg1"
+            ],
+            "createdAt": "2026-08-27T09:06:21.834Z"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "outages",
+      "rev": "5",
+      "state": {
+        "outages": [
+          {
+            "id": "o1",
+            "lat": -33.93,
+            "lng": 18.43,
+            "note": "Eskom crews mobilising",
+            "type": "electricity",
+            "cause": "Flooding",
+            "etaAt": "2026-08-27T13:16:21.834Z",
+            "title": "Zone 3 substation trip",
+            "status": "confirmed",
+            "radiusM": 1800,
+            "affected": 6200,
+            "startedAt": "2026-08-27T08:28:21.834Z"
+          },
+          {
+            "id": "o2",
+            "lat": -33.926,
+            "lng": 18.448,
+            "type": "water",
+            "cause": "Ground movement",
+            "etaAt": "2026-08-27T11:16:21.834Z",
+            "title": "Woodstock main burst",
+            "status": "restoring",
+            "radiusM": 900,
+            "affected": 1200,
+            "startedAt": "2026-08-27T07:16:21.834Z"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "personnel",
+      "rev": "5",
+      "state": {
+        "personnel": [
+          {
+            "id": "p1",
+            "lat": -33.918,
+            "lng": 18.423,
+            "name": "A. Mbeki",
+            "role": "Incident Commander",
+            "online": true
+          },
+          {
+            "id": "p2",
+            "lat": -33.922,
+            "lng": 18.418,
+            "name": "J. Naidoo",
+            "role": "Operations Section Chief",
+            "online": true
+          },
+          {
+            "id": "p3",
+            "name": "S. Botha",
+            "role": "Logistics Section Chief",
+            "online": true
+          },
+          {
+            "id": "p4",
+            "name": "T. Dlamini",
+            "role": "Medical Unit Leader",
+            "online": false
+          },
+          {
+            "id": "p5",
+            "name": "R. Adams",
+            "role": "Safety Officer",
+            "online": true
+          },
+          {
+            "id": "p6",
+            "name": "L. van Wyk",
+            "role": "Public Information Officer",
+            "online": true
+          }
+        ]
+      }
+    },
+    {
+      "slug": "residents",
+      "rev": "5",
+      "state": {
+        "residents": [
+          {
+            "id": "res1",
+            "name": "M. Solomon",
+            "phone": "082 111 2222",
+            "shelterId": "sh1",
+            "residentAreaId": "ra1"
+          },
+          {
+            "id": "res2",
+            "name": "P. Jacobs",
+            "phone": "073 333 4444",
+            "shelterId": "sh1",
+            "residentAreaId": "ra1"
+          },
+          {
+            "id": "res3",
+            "name": "N. Khumalo",
+            "phone": "084 555 6666",
+            "shelterId": null,
+            "residentAreaId": "ra2"
+          }
+        ],
+        "residentAreas": [
+          {
+            "id": "ra1",
+            "city": "Woodstock",
+            "notes": "Low-lying, informal dwellings along the canal",
+            "province": "Western Cape",
+            "municipality": "City of Cape Town",
+            "censusPlaceId": null,
+            "censusPopulation": 32000,
+            "trackedResidents": 2,
+            "estimatedAffected": 5400
+          },
+          {
+            "id": "ra2",
+            "city": "Salt River",
+            "notes": "",
+            "province": "Western Cape",
+            "municipality": "City of Cape Town",
+            "censusPlaceId": null,
+            "censusPopulation": 18500,
+            "trackedResidents": 1,
+            "estimatedAffected": 2100
+          }
+        ]
+      }
+    },
+    {
+      "slug": "resource-requests",
+      "rev": "5",
+      "state": {
+        "resourceRequests": [
+          {
+            "id": "rr1",
+            "lat": null,
+            "lng": null,
+            "hours": 6,
+            "status": "enroute",
+            "resource": "SANDF high-water vehicles x2",
+            "costPerHour": 1500
+          },
+          {
+            "id": "rr2",
+            "lat": null,
+            "lng": null,
+            "hours": 12,
+            "status": "requested",
+            "resource": "Additional pumps x4",
+            "costPerHour": 200
+          },
+          {
+            "id": "rr3",
+            "lat": null,
+            "lng": null,
+            "hours": 24,
+            "status": "assigned",
+            "resource": "Generators (100kVA) x3",
+            "costPerHour": 450
+          },
+          {
+            "id": "rr4",
+            "lat": null,
+            "lng": null,
+            "hours": 0,
+            "status": "ready",
+            "resource": "Blankets x500",
+            "costPerHour": 0
+          }
+        ]
+      }
+    },
+    {
+      "slug": "road-damages",
+      "rev": "5",
+      "state": {
+        "roadDamages": [
+          {
+            "id": "rd1",
+            "lat": -33.913,
+            "lng": 18.386,
+            "reason": "Storm surge overtopping",
+            "status": "closed",
+            "location": "Sea Point",
+            "roadName": "Beach Road",
+            "municipality": "Cape Town",
+            "timeReported": "2026-08-27T08:54:21.834Z",
+            "toIntersection": "Sea Point Pool",
+            "fromIntersection": "Queens Beach"
+          },
+          {
+            "id": "rd2",
+            "lat": -33.955,
+            "lng": 18.377,
+            "reason": "Rockfall / debris",
+            "status": "one_lane",
+            "location": "Camps Bay",
+            "roadName": "Victoria Road",
+            "municipality": "Cape Town",
+            "timeReported": "2026-08-27T08:36:21.834Z",
+            "toIntersection": "Bakoven",
+            "fromIntersection": "Camps Bay"
+          },
+          {
+            "id": "rd3",
+            "lat": -33.93,
+            "lng": 18.44,
+            "reason": "Reopened after clearing",
+            "status": "open",
+            "location": "",
+            "roadName": "Nelson Mandela Blvd",
+            "municipality": "Cape Town",
+            "timeReported": "2026-08-27T07:46:21.834Z",
+            "toIntersection": "N2",
+            "fromIntersection": "CBD"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "roles",
+      "rev": "5",
+      "state": {
+        "roleGroups": [
+          {
+            "id": "g1",
+            "name": "Command Staff",
+            "roles": [
+              {
+                "id": "r1",
+                "title": "Incident Commander",
+                "personnelId": "p1"
+              },
+              {
+                "id": "r2",
+                "title": "Safety Officer",
+                "personnelId": "p5"
+              },
+              {
+                "id": "r3",
+                "title": "Public Information Officer",
+                "personnelId": "p6"
+              }
+            ]
+          },
+          {
+            "id": "g2",
+            "name": "General Staff",
+            "roles": [
+              {
+                "id": "r4",
+                "title": "Operations Chief",
+                "personnelId": "p2"
+              },
+              {
+                "id": "r5",
+                "title": "Logistics Chief",
+                "personnelId": "p3"
+              },
+              {
+                "id": "r6",
+                "title": "Medical Unit Leader",
+                "personnelId": "p4"
+              },
+              {
+                "id": "r7",
+                "title": "Planning Chief",
+                "personnelId": null
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "slug": "rostering",
+      "rev": "5",
+      "state": {
+        "shifts": [
+          {
+            "id": "sh_1",
+            "note": "OP1+OP2 — long shift",
+            "role": "Incident Commander",
+            "endsAt": "2026-08-27T09:16:21.834Z",
+            "startsAt": "2026-08-26T13:16:21.834Z",
+            "personnelId": "p1"
+          },
+          {
+            "id": "sh_2",
+            "role": "Operations Chief",
+            "endsAt": "2026-08-27T11:16:21.834Z",
+            "startsAt": "2026-08-26T21:16:21.834Z",
+            "personnelId": "p2"
+          },
+          {
+            "id": "sh_3",
+            "role": "Medical",
+            "endsAt": "2026-08-27T17:16:21.834Z",
+            "startsAt": "2026-08-27T05:16:21.834Z",
+            "personnelId": "p4"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "shelters",
+      "rev": "5",
+      "state": {
+        "shelters": [
+          {
+            "id": "sh1",
+            "lat": -33.929,
+            "lng": 18.423,
+            "name": "Good Hope Centre",
+            "status": "open",
+            "capacity": 400,
+            "occupancy": 280
+          },
+          {
+            "id": "sh2",
+            "lat": -33.925,
+            "lng": 18.446,
+            "name": "Woodstock Town Hall",
+            "status": "open",
+            "capacity": 150,
+            "occupancy": 170
+          },
+          {
+            "id": "sh3",
+            "lat": -33.915,
+            "lng": 18.389,
+            "name": "Sea Point Civic",
+            "status": "full",
+            "capacity": 120,
+            "occupancy": 120
+          }
+        ]
+      }
+    },
+    {
+      "slug": "situation",
+      "rev": "5",
+      "state": {
+        "situation": {
+          "lat": -33.918,
+          "lng": 18.4233,
+          "name": "Coastal Storm & Flood — DEMO",
+          "endDate": "",
+          "summary": "Severe Atlantic cold front: 90 km/h gusts, 4-5 m swells and heavy rain flooding low-lying areas (Woodstock, Salt River). Storm surge threatening the Sea Point promenade. Two informal settlements evacuating.",
+          "location": "Cape Town CBD & Atlantic Seaboard",
+          "startDate": "2026-08-26T13:16:21.834Z",
+          "objectives": "1. Life safety — evacuate flood-risk zones\n2. Open and staff shelters\n3. Restore power & clear priority routes\n4. Protect critical infrastructure (WWTW, substations)",
+          "keyContacts": "City DRM Duty Officer 021-590-1900 · SAWS Regional 021-935-1100 · Eskom 08600-37566",
+          "activationLevel": "activated"
+        }
+      }
+    },
+    {
+      "slug": "status-boards",
+      "rev": "5",
+      "state": {
+        "statusBoards": [
+          {
+            "id": "sb1",
+            "name": "Operations board",
+            "items": [
+              {
+                "id": "si1",
+                "notes": "2 pumps on site",
+                "title": "Dewater Woodstock",
+                "assignee": "J. Naidoo",
+                "columnId": "col-doing",
+                "priority": "high",
+                "updatedAt": "2026-08-27T09:01:21.834Z"
+              },
+              {
+                "id": "si2",
+                "notes": "Awaiting Eskom",
+                "title": "Restore Zone 3 power",
+                "assignee": "",
+                "columnId": "col-todo",
+                "priority": "urgent",
+                "updatedAt": "2026-08-27T08:56:21.834Z"
+              },
+              {
+                "id": "si3",
+                "notes": "",
+                "title": "Open Good Hope shelter",
+                "assignee": "S. Botha",
+                "columnId": "col-done",
+                "priority": "high",
+                "updatedAt": "2026-08-27T08:41:21.834Z"
+              }
+            ],
+            "columns": [
+              {
+                "id": "col-todo",
+                "title": "To do"
+              },
+              {
+                "id": "col-doing",
+                "title": "In progress"
+              },
+              {
+                "id": "col-done",
+                "title": "Done"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "slug": "tasks",
+      "rev": "5",
+      "state": {
+        "taskLists": [
+          {
+            "id": "tl1",
+            "name": "Immediate response",
+            "items": [
+              {
+                "id": "t1",
+                "title": "Evacuate Woodstock flood zone",
+                "status": "in_progress",
+                "assignee": "J. Naidoo",
+                "priority": "urgent",
+                "checklist": [
+                  {
+                    "id": "ck1",
+                    "done": true,
+                    "label": "Door-to-door sweep"
+                  },
+                  {
+                    "id": "ck2",
+                    "done": false,
+                    "label": "Confirm all clear"
+                  }
+                ]
+              },
+              {
+                "id": "t2",
+                "title": "Open Good Hope Centre shelter",
+                "status": "complete",
+                "assignee": "S. Botha",
+                "priority": "high",
+                "checklist": []
+              },
+              {
+                "id": "t3",
+                "title": "Sandbag Salt River underpass",
+                "status": "not_started",
+                "assignee": "",
+                "priority": "high",
+                "checklist": []
+              }
+            ]
+          },
+          {
+            "id": "tl2",
+            "name": "Infrastructure",
+            "items": [
+              {
+                "id": "t4",
+                "title": "Assess Zone 3 substation",
+                "status": "in_progress",
+                "assignee": "",
+                "priority": "high",
+                "checklist": []
+              },
+              {
+                "id": "t5",
+                "title": "Media statement 21:00",
+                "status": "not_started",
+                "assignee": "L. van Wyk",
+                "priority": "normal",
+                "checklist": []
+              },
+              {
+                "id": "t6",
+                "title": "Stand down non-essential staff",
+                "status": "canceled",
+                "assignee": "",
+                "priority": "low",
+                "checklist": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "slug": "utilities-electricity",
+      "rev": "5",
+      "state": {
+        "utilities": [
+          {
+            "id": "ut1",
+            "city": "Cape Town CBD",
+            "tier": "2",
+            "status": "Outage",
+            "hazardRegion": "Zone 3",
+            "municipality": "City of Cape Town",
+            "totalCustomers": 41000,
+            "customersWithoutPower": 6200
+          },
+          {
+            "id": "ut2",
+            "city": "Atlantic Seaboard",
+            "tier": "1",
+            "status": "Partial",
+            "hazardRegion": "Zone 1",
+            "municipality": "City of Cape Town",
+            "totalCustomers": 22000,
+            "customersWithoutPower": 1800
+          }
+        ]
+      }
+    }
+  ]
+}

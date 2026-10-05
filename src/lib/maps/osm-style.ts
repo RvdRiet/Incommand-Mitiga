@@ -1,4 +1,6 @@
 export type MapBasemapTheme = "light" | "dark";
+/** Which imagery a map shows: vector-ish streets, satellite, or satellite + labels. */
+export type MapBasemapLayer = "streets" | "satellite" | "hybrid";
 
 /** MapLibre max zoom — street maps are sharpest through zoom 19–20. */
 export const MAP_VIEW_MAX_ZOOM = 20;
@@ -6,12 +8,18 @@ export const MAP_VIEW_MIN_ZOOM = 0;
 
 const ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const ESRI_IMAGERY_ATTRIBUTION =
+  "Imagery &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community";
+const MAPTILER_ATTRIBUTION =
+  '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 type BasemapRasterLayer = {
   sourceId: string;
   layerId: string;
   tiles: string[];
   tileMaxZoom: number;
+  /** Per-source attribution; falls back to the OSM string. */
+  attribution?: string;
 };
 
 function inferTileMaxZoom(tileUrl: string): number {
@@ -46,7 +54,7 @@ function buildRasterStyle(layers: BasemapRasterLayer[], name: string) {
       tiles: layer.tiles,
       tileSize: 256,
       maxzoom: layer.tileMaxZoom,
-      attribution: ATTRIBUTION,
+      attribution: layer.attribution ?? ATTRIBUTION,
     };
     mapLayers.push({
       id: layer.layerId,
@@ -145,12 +153,103 @@ function darkBasemapLayers(): BasemapRasterLayer[] {
   ];
 }
 
+/**
+ * Satellite imagery — MapTiler satellite when keyed (cacheable, offline-friendly),
+ * else Esri World Imagery (free, no key, high-res, also cacheable). Both respect
+ * the app's local-first/offline model, unlike Google tiles (no-cache ToS).
+ */
+function satelliteBasemapLayers(): BasemapRasterLayer[] {
+  const key = maptilerKey();
+  if (key) {
+    return [
+      {
+        sourceId: "basemap-satellite",
+        layerId: "basemap-satellite",
+        tiles: [`https://api.maptiler.com/maps/satellite/256/{z}/{x}/{y}.jpg?key=${key}`],
+        tileMaxZoom: 20,
+        attribution: MAPTILER_ATTRIBUTION,
+      },
+    ];
+  }
+  return [
+    {
+      sourceId: "basemap-satellite",
+      layerId: "basemap-satellite",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileMaxZoom: 19,
+      attribution: ESRI_IMAGERY_ATTRIBUTION,
+    },
+  ];
+}
+
+/**
+ * Hybrid — satellite imagery with road + place labels on top. MapTiler's baked
+ * hybrid style when keyed; else Esri World Imagery under two Esri reference
+ * overlays (transportation lines + boundaries/place labels).
+ */
+function hybridBasemapLayers(): BasemapRasterLayer[] {
+  const key = maptilerKey();
+  if (key) {
+    return [
+      {
+        sourceId: "basemap-hybrid",
+        layerId: "basemap-hybrid",
+        tiles: [`https://api.maptiler.com/maps/hybrid/256/{z}/{x}/{y}.jpg?key=${key}`],
+        tileMaxZoom: 20,
+        attribution: MAPTILER_ATTRIBUTION,
+      },
+    ];
+  }
+  return [
+    {
+      sourceId: "basemap-hybrid-imagery",
+      layerId: "basemap-hybrid-imagery",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileMaxZoom: 19,
+      attribution: ESRI_IMAGERY_ATTRIBUTION,
+    },
+    {
+      sourceId: "basemap-hybrid-roads",
+      layerId: "basemap-hybrid-roads",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileMaxZoom: 19,
+      attribution: ESRI_IMAGERY_ATTRIBUTION,
+    },
+    {
+      sourceId: "basemap-hybrid-labels",
+      layerId: "basemap-hybrid-labels",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileMaxZoom: 19,
+      attribution: ESRI_IMAGERY_ATTRIBUTION,
+    },
+  ];
+}
+
 /** Unified basemap — full-color roads, buildings, and labels (no contrast filters). */
 export function contrastBasemapStyle(theme: MapBasemapTheme) {
   if (theme === "light") {
     return buildRasterStyle(lightBasemapLayers(), "InCommand Streets Light");
   }
   return buildRasterStyle(darkBasemapLayers(), "InCommand Streets Dark");
+}
+
+/** Style for a given imagery layer. Satellite/hybrid ignore light/dark theme. */
+export function basemapStyleFor(layer: MapBasemapLayer, theme: MapBasemapTheme) {
+  if (layer === "satellite") {
+    return buildRasterStyle(satelliteBasemapLayers(), "InCommand Satellite");
+  }
+  if (layer === "hybrid") {
+    return buildRasterStyle(hybridBasemapLayers(), "InCommand Hybrid");
+  }
+  return contrastBasemapStyle(theme);
 }
 
 /** @deprecated Use contrastBasemapStyle. */

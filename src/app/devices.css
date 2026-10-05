@@ -1,0 +1,688 @@
+/* Device registry (bodycam fleet) */
+
+.dev-registry {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.dev-registry__head .ic-back-btn {
+  margin-bottom: 0.75rem;
+}
+
+.dev-registry__head h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.dev-registry__sub {
+  margin: 0.25rem 0 0;
+  max-width: 66ch;
+  font-size: 0.875rem;
+  color: var(--ic-text-muted, #6b7280);
+}
+
+.dev-registry__notice {
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  background: rgba(13, 148, 136, 0.12);
+  color: #0f766e;
+  font-size: 0.875rem;
+}
+
+.dev-registry__register {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.dev-registry__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.1));
+  background: var(--ic-surface, #fff);
+}
+
+.dev-registry__card h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.dev-registry__form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.dev-registry__form label,
+.dev-registry__card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ic-text-muted, #6b7280);
+}
+
+.dev-registry__form input,
+.dev-registry__card textarea,
+.dev-registry__card input {
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.18));
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: inherit;
+  background: var(--ic-surface, #fff);
+}
+
+.dev-registry__opt {
+  font-weight: 400;
+  opacity: 0.6;
+}
+
+.dev-registry__section-title {
+  margin: 0.5rem 0 0;
+  font-size: var(--text-md);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.dev-registry__empty {
+  color: var(--ic-text-muted, #6b7280);
+  font-size: 0.9rem;
+}
+
+.dev-registry__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.dev-registry__device {
+  position: relative;
+  display: flex;
+  gap: 0.9rem;
+  padding: 0.9rem;
+  border-radius: 12px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.1));
+  background: var(--ic-surface, #fff);
+}
+
+.dev-registry__qr {
+  flex: none;
+  padding: 6px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  height: fit-content;
+}
+
+.dev-registry__device-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.dev-registry__callsign {
+  font-size: 1.05rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px 4px;
+  background: transparent;
+  color: inherit;
+}
+
+.dev-registry__callsign:hover,
+.dev-registry__callsign:focus,
+.dev-registry__label:hover,
+.dev-registry__label:focus {
+  border-color: var(--ic-border, rgba(0, 0, 0, 0.18));
+  outline: none;
+}
+
+.dev-registry__label {
+  font-size: 0.8125rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px 4px;
+  background: transparent;
+  color: inherit;
+}
+
+.dev-registry__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--ic-text-muted, #6b7280);
+}
+
+/* Badge diet: model/circle are metadata, not statuses — render as plain text. */
+.dev-registry__tag {
+  font-weight: 500;
+  color: var(--ic-text-muted, #6b7280);
+}
+
+/* Live bodycam presence badge */
+.dev-registry__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 9px 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.dev-registry__status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.dev-registry__status--online {
+  color: #047857;
+  background: rgba(5, 150, 105, 0.12);
+  border-color: rgba(5, 150, 105, 0.3);
+}
+.dev-registry__status--online .dev-registry__status-dot {
+  background: #10b981;
+  animation: dev-status-pulse 2.2s ease-out infinite;
+}
+.dev-registry__status--offline {
+  color: #b91c1c;
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+.dev-registry__status--offline .dev-registry__status-dot {
+  background: #dc2626;
+}
+@keyframes dev-status-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+  70% { box-shadow: 0 0 0 5px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dev-registry__status--online .dev-registry__status-dot { animation: none; }
+}
+
+.dev-registry__deploy {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+}
+
+.dev-registry__deploy-label {
+  font-weight: 600;
+  color: var(--ic-text-muted, #6b7280);
+  white-space: nowrap;
+}
+
+.dev-registry__deploy-select {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.2));
+  background: var(--ic-surface, #fff);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.dev-registry__id {
+  font-family: ui-monospace, monospace;
+  font-size: 0.7rem;
+  word-break: break-all;
+}
+
+.dev-registry__remove {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  border: none;
+  background: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ic-text-muted, #9ca3af);
+}
+
+.dev-registry__remove:hover {
+  color: #dc2626;
+}
+
+.events-registry-link {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+}
+
+.events-registry-link a {
+  color: var(--ic-primary, #e2483d);
+  text-decoration: none;
+}
+
+.ic-comms__registry {
+  max-width: 190px;
+}
+
+.dev-enroll__waiting,
+.dev-enroll__done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: center;
+}
+
+.dev-enroll__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ic-text-muted, #6b7280);
+}
+
+/* Camera QR scanner modal */
+.dev-scanner {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 1rem;
+}
+
+.dev-scanner__panel {
+  width: min(420px, 100%);
+  background: var(--ic-surface, #fff);
+  border-radius: 14px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.dev-scanner__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dev-scanner__close {
+  border: none;
+  background: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ic-text-muted, #6b7280);
+}
+
+.dev-scanner__viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+
+.dev-scanner__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dev-scanner__reticle {
+  position: absolute;
+  inset: 18%;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.25);
+}
+
+.dev-scanner__error {
+  margin: 0;
+  padding: 1rem;
+  border-radius: 10px;
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.dev-scanner__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ic-text-muted, #6b7280);
+  text-align: center;
+}
+
+/* -------- Organisation personnel roster (/roster) -------- */
+.ic-roster__form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ic-roster__form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.ic-roster__form input {
+  padding: 7px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.2));
+  font-weight: 400;
+}
+
+.ic-roster__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ic-roster__person {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 40px 10px 12px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.1));
+  border-radius: 10px;
+  background: var(--ic-surface, #fff);
+}
+
+.ic-roster__person-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 170px;
+}
+
+.ic-roster__name {
+  font-weight: 700;
+  font-size: 0.9375rem;
+  border: none;
+  background: transparent;
+  padding: 2px 0;
+}
+
+.ic-roster__role {
+  font-size: 0.8125rem;
+  color: var(--ic-text-muted, #6b7280);
+  border: none;
+  background: transparent;
+  padding: 2px 0;
+}
+
+.ic-roster__person-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ic-roster__person-meta input {
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.15));
+  font-size: 0.75rem;
+  width: 130px;
+  max-width: 40vw;
+}
+
+/* Experience & history field — full width under the person's meta row. */
+.ic-roster__experience {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.6875rem;
+  color: var(--ic-text-muted, #6b7280);
+}
+
+.ic-roster__experience textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.15));
+  font-size: 0.75rem;
+  font-family: inherit;
+  color: var(--ic-text, #111827);
+  resize: vertical;
+  min-height: 34px;
+}
+
+/* Roster / Attendance tab switcher. */
+.ic-roster__tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 14px;
+  border-bottom: 1px solid var(--ic-border, rgba(0, 0, 0, 0.12));
+}
+
+.ic-roster__tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 8px 14px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ic-text-muted, #6b7280);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.ic-roster__tab--active {
+  color: var(--ic-accent, #0d9488);
+  border-bottom-color: var(--ic-accent, #0d9488);
+}
+
+/* --- Attendance manager --- */
+.ic-attend__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ic-attend__date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ic-attend__date input[type="date"] {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.15));
+  font-size: 0.8125rem;
+}
+
+.ic-attend__nav {
+  appearance: none;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.15));
+  background: var(--ic-surface, #fff);
+  border-radius: 6px;
+  width: 28px;
+  height: 30px;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--ic-text, #111827);
+}
+
+.ic-attend__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ic-attend__chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.ic-attend__chip--present {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+.ic-attend__chip--late {
+  background: rgba(217, 119, 6, 0.14);
+  color: #b45309;
+}
+.ic-attend__chip--absent {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+}
+.ic-attend__chip--excused {
+  background: rgba(100, 116, 139, 0.14);
+  color: #475569;
+}
+.ic-attend__chip--unmarked {
+  background: transparent;
+  color: var(--ic-text-muted, #6b7280);
+  border-color: var(--ic-border, rgba(0, 0, 0, 0.15));
+}
+
+.ic-attend__markall {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--ic-text-muted, #6b7280);
+  margin-bottom: 10px;
+}
+
+.ic-attend__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ic-attend__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.1));
+  border-radius: 10px;
+  background: var(--ic-surface, #fff);
+}
+
+.ic-attend__person {
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  flex: 1;
+}
+.ic-attend__person strong {
+  font-size: 0.875rem;
+}
+.ic-attend__person span {
+  font-size: 0.75rem;
+  color: var(--ic-text-muted, #6b7280);
+}
+
+.ic-attend__status {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.ic-attend__btn {
+  appearance: none;
+  cursor: pointer;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.15));
+  background: var(--ic-surface, #fff);
+  color: var(--ic-text-muted, #6b7280);
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.ic-attend__btn:hover {
+  border-color: var(--ic-text-muted, #9ca3af);
+}
+.ic-attend__btn--present.ic-attend__btn--on {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+}
+.ic-attend__btn--late.ic-attend__btn--on {
+  background: #d97706;
+  border-color: #d97706;
+  color: #fff;
+}
+.ic-attend__btn--absent.ic-attend__btn--on {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+.ic-attend__btn--excused.ic-attend__btn--on {
+  background: #64748b;
+  border-color: #64748b;
+  color: #fff;
+}
+
+.ic-attend__detail {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ic-attend__time {
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.15));
+  font-size: 0.75rem;
+}
+.ic-attend__note {
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--ic-border, rgba(0, 0, 0, 0.15));
+  font-size: 0.75rem;
+  width: 180px;
+  max-width: 44vw;
+}
+.ic-attend__note:disabled {
+  background: var(--ic-surface-muted, #f8fafc);
+  cursor: not-allowed;
+}

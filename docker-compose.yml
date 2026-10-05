@@ -1,0 +1,96 @@
+# Local development stack for InCommand.
+#   - postgres : Postgres 16 + PostGIS (the app's primary database; RLS multi-tenant)
+#   - minio    : S3-compatible object storage for blobs (PDFs, photos, bodycam video)
+#   - redis    : pub/sub backplane for the realtime WebSocket services (scale-out ready)
+#   - livekit  : bodycam/webcam live video (RFC-007) — --dev mode uses the fixed
+#                devkey/secret keypair that LIVEKIT_API_KEY/SECRET in .env.local expect.
+#
+# Usage:  docker compose up -d   then   npm run dev
+# The migrations in ./migrations run automatically on first Postgres init.
+# LiveKit needs LIVEKIT_URL/NEXT_PUBLIC_LIVEKIT_URL in .env.local pointed at this machine's
+# current LAN IP (not localhost/127.0.0.1) so bodycams and other devices can reach it — that
+# IP drifts with DHCP, so re-check `ipconfig`/`ip addr` if video stops connecting.
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: incommand-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mitiga
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Migrations are applied by the tracked runner (`npm run db:migrate`), not by
+    # an initdb mount — so schema changes are versioned and ordered in every
+    # environment. After `docker compose up -d`, run `npm run db:migrate`.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mitiga"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  minio:
+    image: minio/minio:latest
+    container_name: incommand-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # web console
+    volumes:
+      - miniodata:/data
+
+  # Creates the app bucket once MinIO is up, then exits.
+  minio-init:
+    image: minio/mc:latest
+    container_name: incommand-minio-init
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do echo 'waiting for minio...'; sleep 2; done;
+      mc mb --ignore-existing local/incommand;
+      echo 'bucket incommand ready';
+      "
+
+  redis:
+    image: redis:7-alpine
+    container_name: incommand-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  # Local SMTP catcher for testing invite/reset emails. Web UI on :8025, SMTP on
+  # :1025. To exercise real SMTP in dev, set EMAIL_TRANSPORT=smtp, SMTP_HOST=localhost,
+  # SMTP_PORT=1025 and watch messages arrive at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: incommand-mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: incommand-livekit
+    restart: unless-stopped
+    command: --dev --bind 0.0.0.0
+    ports:
+      - "7880:7880" # HTTP/WebSocket (client + server SDK connections)
+      - "7881:7881" # TCP fallback for ICE
+      - "7882:7882/udp" # WebRTC media (dev mode's single UDP port, not a range)
+
+volumes:
+  pgdata:
+  miniodata:
+  redisdata:

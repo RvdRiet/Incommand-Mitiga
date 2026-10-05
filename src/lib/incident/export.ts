@@ -1,7 +1,12 @@
 import type { IncidentState } from "./types";
 
-/** Client-side incident bundle export (TOR §4.10 IAP / audit) */
-export function downloadIncidentExport(state: IncidentState) {
+/**
+ * Client-side incident bundle export (TOR §4.10 IAP / audit). Triggers a .json
+ * download and returns the filename + Blob so the caller can also archive it.
+ */
+export function downloadIncidentExport(
+  state: IncidentState,
+): { filename: string; blob: Blob } {
   const bundle = {
     exportedAt: new Date().toISOString(),
     version: 1,
@@ -33,10 +38,15 @@ export function downloadIncidentExport(state: IncidentState) {
   const blob = new Blob([JSON.stringify(bundle, null, 2)], {
     type: "application/json",
   });
+  const safe =
+    state.situation.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() ||
+    "export";
+  const filename = `incident-${safe}.json`;
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `incident-${state.situation.name.replace(/\s+/g, "-").toLowerCase() || "export"}.json`;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+  return { filename, blob };
 }

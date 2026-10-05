@@ -4,6 +4,9 @@
  * Booklet: NIMS ICS Forms Booklet (FEMA 502-2), v3
  */
 
+import { newId, nowIso } from "./id";
+import type { IcsFormRecord } from "./types";
+
 export const FEMA_ICS_FORMS_INDEX_URL =
   "https://training.fema.gov/icsresource/icsforms.aspx";
 
@@ -769,4 +772,96 @@ export function serializeFormFields(
 
 export function displayFormName(template: IcsFormTemplate): string {
   return `ICS ${template.number} — ${template.title}`;
+}
+
+/**
+ * ICS-202 attachment checkbox id → the ICS form template it calls for.
+ * Attachments that aren't standalone ICS forms (map/chart, weather) are omitted.
+ */
+export const ICS202_ATTACHMENT_FORM: Record<string, string> = {
+  iap203: "ICS-203",
+  iap204: "ICS-204",
+  iap205: "ICS-205",
+  iap205a: "ICS-205A",
+  iap206: "ICS-206",
+  iap207: "ICS-207",
+  iap208: "ICS-208",
+};
+
+export type RequiredForm = { templateId: string; label: string };
+
+/**
+ * Derive the forms the IAP requires by reading the ticked attachment checkboxes
+ * on any ICS-202 present in the incident. De-duplicates across multiple 202s.
+ */
+export function getRequiredFormsFromIcs202(
+  forms: { templateId: string | null; content: string }[],
+): RequiredForm[] {
+  const required = new Map<string, RequiredForm>();
+  for (const form of forms) {
+    if (form.templateId !== "ICS-202") continue;
+    const { fields } = parseFormContent(form.content, form.templateId);
+    for (const [attId, templateId] of Object.entries(ICS202_ATTACHMENT_FORM)) {
+      if (fields[attId] === "1" && !required.has(templateId)) {
+        const template = getIcsFormTemplate(templateId);
+        required.set(templateId, {
+          templateId,
+          label: template ? displayFormName(template) : templateId,
+        });
+      }
+    }
+  }
+  return [...required.values()];
+}
+
+/**
+ * Build a fresh draft form record for a template, optionally prefilling common
+ * header fields from the incident situation. Shared by the store's `addForm`
+ * action and by event seeding (so seeded and manually-added forms are identical).
+ */
+export function buildFormRecord(
+  templateId: string,
+  prefill?: {
+    incidentName?: string;
+    dateTime?: string;
+    operationalPeriod?: string;
+    objectives?: string;
+    currentSituation?: string;
+  },
+): IcsFormRecord | null {
+  const template = getIcsFormTemplate(templateId);
+  if (!template) return null;
+  let content = buildInitialFormContent(template);
+  if (prefill) {
+    try {
+      const payload = JSON.parse(content) as { fields: Record<string, string> };
+      const f = payload.fields;
+      if (f.incidentName !== undefined && prefill.incidentName) f.incidentName = prefill.incidentName;
+      if (f.dateTime !== undefined && prefill.dateTime) f.dateTime = prefill.dateTime;
+      if (f.operationalPeriod !== undefined && prefill.operationalPeriod)
+        f.operationalPeriod = prefill.operationalPeriod;
+      if (f.objectives !== undefined && prefill.objectives) f.objectives = prefill.objectives;
+      if (f.currentSituation !== undefined && prefill.currentSituation)
+        f.currentSituation = prefill.currentSituation;
+      content = JSON.stringify({ ...payload, v: 1, templateId: template.id }, null, 2);
+    } catch {
+      /* keep default scaffold */
+    }
+  }
+  return {
+    id: newId(),
+    templateId: template.id,
+    formNumber: template.number,
+    name: displayFormName(template),
+    officialTitle: template.title,
+    formType: "ICS",
+    modifiedAt: nowIso(),
+    savedAt: null,
+    filledBy: null,
+    folderId: null,
+    content,
+    status: "draft",
+    pdfUrl: template.pdfUrl,
+    inIap: template.inIap,
+  };
 }

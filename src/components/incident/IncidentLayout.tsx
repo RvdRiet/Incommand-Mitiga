@@ -6,16 +6,71 @@ import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { TopBar } from "@/components/dashboard/TopBar";
 import { useEventId, useIncidentStore, useIncidentStoreHydrated } from "@/context/EventContext";
+import { usePermissions } from "@/context/PermissionsContext";
 import { getModuleBySlug } from "@/lib/navigation/modules";
+import { ALL_MODULE_SLUGS } from "@/lib/auth/permissions";
 
+const RESTRICTABLE = new Set(ALL_MODULE_SLUGS);
+
+import { DemoBanner } from "./DemoBanner";
+import { DistressBanner } from "./DistressBanner";
+import { useTelemetryDistress } from "./useTelemetryDistress";
+import { ModuleDataMenu } from "./ModuleDataMenu";
 import { ModuleToolbar } from "./ModuleToolbar";
 import { ModuleView } from "./ModuleView";
 import { useModuleAddHandler } from "./useModuleAdd";
+import { EXPORTABLE_MODULE_SLUGS } from "@/lib/incident/module-export";
+
+/** Modules whose view renders a <SearchBar> (searchActive) — the only ones that show "Search". */
+const SEARCH_MODULES = new Set([
+  "roles",
+  "damage-assessment",
+  "residents",
+  "resource-requests",
+  "road-damages",
+  "shelters",
+  "utilities-electricity",
+  "personnel",
+  "library",
+  "map-annotations",
+  "tasks",
+]);
+
+/** Modules whose view uses `filterActive` (status filter) — the only ones that show "Filters". */
+const FILTER_MODULES = new Set([
+  "damage-assessment",
+  "resource-requests",
+  "road-damages",
+  "shelters",
+]);
+
+/**
+ * Modules whose toolbar "+ Add" performs a real action (mirrors useModuleAdd's cases).
+ * Positive allowlist — anything not listed hides the button so we never render a dead
+ * one. Views that provide their own in-page add control (calendar, status-boards,
+ * notifications, forms) are intentionally omitted here.
+ */
+const TOOLBAR_ADD_MODULES = new Set([
+  "roles",
+  "tasks",
+  "damage-assessment",
+  "residents",
+  "resource-requests",
+  "road-damages",
+  "shelters",
+  "utilities-electricity",
+  "personnel",
+  "library",
+  "map-annotations",
+]);
 
 export function IncidentLayout({ moduleSlug }: { moduleSlug: string }) {
   const eventId = useEventId();
   const storeHydrated = useIncidentStoreHydrated();
+  const { canSee } = usePermissions();
   const mod = getModuleBySlug(moduleSlug);
+  // Block direct navigation to a restrictable module the role may not see.
+  const moduleBlocked = RESTRICTABLE.has(moduleSlug) && !canSee(moduleSlug);
   const isDashboard = !moduleSlug;
   const situation = useIncidentStore((s) => s.situation);
   const [searchActive, setSearchActive] = useState(false);
@@ -32,6 +87,8 @@ export function IncidentLayout({ moduleSlug }: { moduleSlug: string }) {
     setFilterActive(false);
   }, [pathname]);
 
+  useTelemetryDistress();
+
   const handleAdd = useModuleAddHandler(moduleSlug);
 
   const addLabel =
@@ -41,29 +98,11 @@ export function IncidentLayout({ moduleSlug }: { moduleSlug: string }) {
         ? "+ Add Team"
         : "+ Add";
 
-  const showFilter =
-    moduleSlug !== "logs" &&
-    moduleSlug !== "situation" &&
-    moduleSlug !== "briefings" &&
-    moduleSlug !== "plays";
-  const showSearch =
-    moduleSlug !== "situation" &&
-    moduleSlug !== "logs" &&
-    moduleSlug !== "briefings" &&
-    moduleSlug !== "plays" &&
-    moduleSlug !== "notifications";
-  const showAdd =
-    moduleSlug !== "" &&
-    moduleSlug !== "forms" &&
-    moduleSlug !== "situation" &&
-    moduleSlug !== "map" &&
-    moduleSlug !== "calendar" &&
-    moduleSlug !== "briefings" &&
-    moduleSlug !== "plays" &&
-    moduleSlug !== "notifications" &&
-    moduleSlug !== "status-boards" &&
-    moduleSlug !== "settings" &&
-    moduleSlug !== "weather";
+  // Only show Search / Filters on modules that actually implement them (otherwise they're dead
+  // buttons). These lists mirror the views that render a <SearchBar> / use `filterActive`.
+  const showSearch = SEARCH_MODULES.has(moduleSlug);
+  const showFilter = FILTER_MODULES.has(moduleSlug);
+  const showAdd = TOOLBAR_ADD_MODULES.has(moduleSlug);
 
   if (!storeHydrated) {
     return (
@@ -90,6 +129,8 @@ export function IncidentLayout({ moduleSlug }: { moduleSlug: string }) {
           )
         }
       />
+      <DemoBanner />
+      <DistressBanner />
       <ModuleToolbar
         eventId={eventId}
         moduleSlug={moduleSlug}
@@ -104,22 +145,27 @@ export function IncidentLayout({ moduleSlug }: { moduleSlug: string }) {
         onFilterClick={() => setFilterActive((v) => !v)}
         onMenuToggle={() => setSidebarOpen((v) => !v)}
         extraActions={
-          moduleSlug === "roles" ? (
-            <button
-              type="button"
-              className={`ic-toolbar-text-btn${orgChartOpen ? " ic-toolbar-text-btn--active" : ""}`}
-              aria-pressed={orgChartOpen}
-              onClick={() => {
-                const params = new URLSearchParams(searchParams.toString());
-                if (orgChartOpen) params.delete("orgChart");
-                else params.set("orgChart", "1");
-                const q = params.toString();
-                router.push(q ? `${pathname}?${q}` : pathname);
-              }}
-            >
-              Org Chart
-            </button>
-          ) : null
+          <>
+            {moduleSlug === "roles" ? (
+              <button
+                type="button"
+                className={`ic-toolbar-text-btn${orgChartOpen ? " ic-toolbar-text-btn--active" : ""}`}
+                aria-pressed={orgChartOpen}
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  if (orgChartOpen) params.delete("orgChart");
+                  else params.set("orgChart", "1");
+                  const q = params.toString();
+                  router.push(q ? `${pathname}?${q}` : pathname);
+                }}
+              >
+                Org Chart
+              </button>
+            ) : null}
+            {EXPORTABLE_MODULE_SLUGS.has(moduleSlug) ? (
+              <ModuleDataMenu slug={moduleSlug} />
+            ) : null}
+          </>
         }
       />
       {sidebarOpen ? (
@@ -133,12 +179,23 @@ export function IncidentLayout({ moduleSlug }: { moduleSlug: string }) {
       <div className="ic-app__body">
         <Sidebar activeSlug={moduleSlug} />
         <main className={`ic-main ${isDashboard ? "ic-main--dashboard" : "ic-main--module"}`}>
-          <ModuleView
-            slug={moduleSlug}
-            searchActive={searchActive}
-            filterActive={filterActive}
-            orgChartOpen={orgChartOpen}
-          />
+          {moduleBlocked ? (
+            <div className="ic-empty-hint" style={{ padding: 24, maxWidth: 520 }}>
+              <h2 style={{ marginTop: 0 }}>Access restricted</h2>
+              <p>
+                Your role doesn&apos;t have access to <strong>{mod?.label ?? "this module"}</strong>{" "}
+                for this district. If you need it, ask a district administrator to grant your role
+                access under Roles &amp; access.
+              </p>
+            </div>
+          ) : (
+            <ModuleView
+              slug={moduleSlug}
+              searchActive={searchActive}
+              filterActive={filterActive}
+              orgChartOpen={orgChartOpen}
+            />
+          )}
         </main>
       </div>
     </div>

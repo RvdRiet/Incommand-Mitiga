@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { clientIp, enforceRateLimit } from "@/lib/auth/api-rate-limit";
 import { createMapStackFromEnv } from "@/lib/maps/providers";
 
 export async function GET(req: Request) {
+  // Public data — no auth gate (works with a stale session); IP rate-limit bounds abuse.
+  const limited = await enforceRateLimit(`traffic:${clientIp(req)}`, 120, 60);
+  if (limited) return limited;
+
   const url = new URL(req.url);
   const west = Number(url.searchParams.get("west"));
   const south = Number(url.searchParams.get("south"));

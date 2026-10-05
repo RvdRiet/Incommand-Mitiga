@@ -1,0 +1,187 @@
+/* =============================================================================
+   Mobile / small-screen responsive layer. Imported LAST so it overrides the
+   desktop layouts. Targets phones and small tablets. The shell (sidebar drawer,
+   top bar) and a few modules (Situation, dashboard grid) already respond; this
+   file makes the split/panel/table layouts stack and scroll instead of clipping.
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  /* Never let the page scroll sideways. */
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* ---- Forms: list stacks over a full-width editor ---- */
+  .ic-forms-split {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .ic-forms-split .ic-table-wrap,
+  .ic-forms-split:has(.ic-form-editor--fema) .ic-table-wrap {
+    flex: none;
+    width: 100%;
+    max-height: 38vh;
+  }
+
+  .ic-form-editor,
+  .ic-form-editor--fema {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+    border-left: none;
+    border-top: 1px solid var(--ic-border, rgba(0, 0, 0, 0.12));
+    padding: 14px 12px;
+  }
+
+  .ic-form-editor--fema .fema-ics-form {
+    max-width: 100%;
+  }
+
+  .fema-ics-form__table-wrap {
+    overflow-x: auto;
+  }
+
+  /* ---- Outage Map: controls stack over the map ---- */
+  .ic-outages {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .ic-outages__panel {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+    padding: 4px 2px 16px;
+  }
+
+  .ic-outages__map {
+    height: 56vh;
+    min-height: 320px;
+  }
+
+  .ic-outages__grid2 {
+    grid-template-columns: 1fr;
+  }
+
+  .ic-outages__hint--draw {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* ---- Track History: header + controls wrap, shorter map ---- */
+  .ic-track-history__map {
+    height: 46vh;
+    min-height: 280px;
+  }
+
+  .ic-track-history__head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ic-track-history__controls {
+    flex-wrap: wrap;
+  }
+
+  .ic-track-history__readout {
+    align-items: flex-start;
+  }
+
+  .ic-track-history__stats {
+    gap: 0.75rem;
+  }
+
+  /* ---- Live Ops (comms): single-column channels, scrollable roster table ---- */
+  .ic-comms__channels {
+    grid-template-columns: 1fr;
+  }
+
+  .ic-comms__head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* ---- Map module: keep the floating Layers panel from eating the screen ---- */
+  .ic-map-layers {
+    width: min(62vw, 220px);
+    max-height: 55%;
+    font-size: 0.8125rem;
+  }
+
+  /* ---- Device registry: single-column register cards (minmax(0,…) so they shrink to fit) ---- */
+  .dev-registry__register {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dev-registry__card,
+  .dev-registry__device {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .dev-registry__card h2,
+  .dev-registry__sub,
+  .dev-registry__id,
+  .dev-registry__callsign {
+    overflow-wrap: anywhere;
+  }
+
+  /* Let every child of a card shrink below its intrinsic width so nothing forces the card wide. */
+  .dev-registry__card *,
+  .dev-registry__device * {
+    min-width: 0;
+  }
+
+  .dev-registry__card input,
+  .dev-registry__card textarea,
+  .dev-registry__card select,
+  .dev-registry__device input {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* ---- Generic: any table wrapper scrolls rather than clipping ---- */
+  .ic-table-wrap,
+  .ic-table--scroll,
+  .fema-ics-form__table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Module toolbar + top bar controls wrap instead of overflowing */
+  .ic-module-toolbar,
+  .ic-module-toolbar__right,
+  .ic-module-toolbar__left {
+    flex-wrap: wrap;
+  }
+
+  .ic-module-jump__select {
+    max-width: 46vw;
+  }
+
+  /* Segmented controls wrap on very narrow screens */
+  .ic-stage-toggle,
+  .ic-workspace-tabs {
+    flex-wrap: wrap;
+  }
+
+  /* Wide dashboard widgets already collapse; make the weather meta breathe */
+  .ic-weather-widget__meta {
+    gap: 6px;
+  }
+}
+
+/* Extra-narrow phones */
+@media (max-width: 400px) {
+  .ic-outages__map {
+    height: 50vh;
+  }
+
+  .ic-track-history__map {
+    height: 42vh;
+  }
+}

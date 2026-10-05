@@ -7,6 +7,7 @@ import { useEventId } from "@/context/EventContext";
 import type { ActivationLevel } from "@/lib/incident/types";
 import { moduleHref } from "@/lib/navigation/modules";
 
+import { SaveIndicator } from "./SaveIndicator";
 import {
   TopBarAccountMenu,
   TopBarHelpButton,
@@ -16,7 +17,7 @@ import {
 const ACTIVATION_LABEL: Record<ActivationLevel, string> = {
   planning: "Planning",
   activated: "Activated",
-  closed: "Closed",
+  closed: "Resolved",
 };
 
 export function TopBar({
@@ -81,6 +82,7 @@ export function TopBar({
       </div>
 
       <section className="ic-topbar__right">
+        <SaveIndicator />
         <span className="ic-topbar__timer" title="Time since event start">
           {timerLabel}
         </span>

@@ -4,9 +4,14 @@ import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import { newId, nowIso } from "@/lib/incident/id";
-import { defaultSituation } from "@/lib/incident/initial-state";
+import { newId, nowIso, nowLocalInput } from "@/lib/incident/id";
+import { buildFormRecord } from "@/lib/incident/ics-forms-catalog";
+import { createInitialIncidentState } from "@/lib/incident/initial-state";
+import type { IcsFormRecord, TaskItem } from "@/lib/incident/types";
 
+import { DEMO_EVENT, DEMO_EVENT_ID, ensureDemoIncidentState } from "@/lib/incident/demo-seed";
+
+import { getIncidentTemplate } from "./templates";
 import type { EventRecord, EventStatus } from "./types";
 
 export const DEFAULT_ORGANIZATION_NAME = "Ehlanzeni District Municipality";
@@ -39,7 +44,7 @@ function migrateLegacyIncident(): { event: EventRecord; legacyState: unknown } |
       id,
       name: situation.name,
       status: mapActivationToStatus(situation.activationLevel),
-      startDate: situation.startDate ?? nowIso().slice(0, 16),
+      startDate: situation.startDate ?? nowLocalInput(),
       endDate: "",
       archived: false,
       lat: situation.lat ?? null,
@@ -67,12 +72,15 @@ type EventsState = {
 };
 
 type EventsActions = {
-  createEvent: (name?: string) => string;
+  createEvent: (name?: string, templateId?: string) => string;
   updateEvent: (id: string, patch: Partial<EventRecord>) => void;
   archiveEvent: (id: string) => void;
   restoreEvent: (id: string) => void;
   removeEvent: (id: string) => void;
   setOrganizationName: (name: string) => void;
+  /** Merge incidents that exist on the server but not yet in this browser's list,
+   *  so events created on another device/browser show up here. Additive only. */
+  mergeServerEvents: (records: { id: string; name: string; createdAt?: string | null }[]) => void;
 };
 
 export type EventsStore = EventsState & EventsActions;
@@ -110,51 +118,60 @@ export const useEventsStore = create<EventsStore>()(
       organizationName: DEFAULT_ORGANIZATION_NAME,
       events: [seedStadiumEvent()],
 
-      createEvent: (name) => {
+      createEvent: (name, templateId) => {
         const id = newId();
-        const eventName = name?.trim() || "New Event";
+        const template = getIncidentTemplate(templateId);
+        const eventName = name?.trim() || template?.name || "New Event";
         const event: EventRecord = {
           id,
           name: eventName,
           status: "none",
-          startDate: nowIso().slice(0, 16),
+          startDate: nowLocalInput(),
           endDate: "",
           archived: false,
           lat: null,
           lng: null,
           createdAt: nowIso(),
+          icon: template?.icon,
+          templateId: template && template.id !== "blank" ? template.id : undefined,
         };
         set((s) => ({ events: [event, ...s.events] }));
         if (typeof window !== "undefined") {
-          const situation = defaultSituation(eventName);
-          const stub = {
-            state: {
-              situation,
-              personnel: [],
-              roleGroups: [],
-              logs: [],
-              audit: [],
-              forms: [],
-              taskLists: [],
-              damages: [],
-              residents: [],
-              residentAreas: [],
-              resourceRequests: [],
-              roadDamages: [],
-              shelters: [],
-              utilities: [],
-              library: [],
-              mapAnnotations: [],
-              calendarEvents: [],
-              operationalPeriods: [],
-              settings: {
-                timezone: "America/Johannesburg",
-                defaultActivationLevel: "planning",
-                enablePublicPortal: false,
-              },
-            },
-            version: 0,
-          };
+          // Seed a complete incident state, applying template starters.
+          const state = createInitialIncidentState(eventName);
+          if (template) {
+            state.situation = {
+              ...state.situation,
+              summary: template.situationSummary,
+              objectives: template.objectives,
+            };
+            if (template.runbook) {
+              const items: TaskItem[] = template.runbook.items.map((title) => ({
+                id: newId(),
+                title,
+                status: "not_started",
+              }));
+              state.taskLists = [
+                { id: newId(), name: template.runbook.name, items },
+                ...state.taskLists,
+              ];
+            }
+          }
+          // Every incident starts with ICS 201 (Incident Briefing) and ICS 202
+          // (Incident Objectives) already on the board, prefilled from the situation.
+          const seededForms = ["ICS-201", "ICS-202"]
+            .map((tid) =>
+              buildFormRecord(tid, {
+                incidentName: state.situation.name,
+                dateTime: state.situation.startDate,
+                operationalPeriod: state.situation.startDate,
+                objectives: state.situation.objectives,
+                currentSituation: state.situation.summary,
+              }),
+            )
+            .filter((f): f is IcsFormRecord => f !== null);
+          state.forms = [...seededForms, ...state.forms];
+          const stub = { state, version: 0 };
           localStorage.setItem(`mitiga-incident-${id}`, JSON.stringify(stub));
         }
         return id;
@@ -182,14 +199,44 @@ export const useEventsStore = create<EventsStore>()(
       },
 
       setOrganizationName: (name) => set({ organizationName: name }),
+
+      mergeServerEvents: (records) => {
+        set((s) => {
+          const known = new Set(s.events.map((e) => e.id));
+          const additions: EventRecord[] = records
+            .filter((r) => r.id && !known.has(r.id))
+            .map((r) => ({
+              id: r.id,
+              name: r.name || "Untitled incident",
+              status: "none",
+              startDate: (r.createdAt ?? "").slice(0, 16),
+              endDate: "",
+              archived: false,
+              lat: null,
+              lng: null,
+              createdAt: r.createdAt ?? new Date().toISOString(),
+            }));
+          return additions.length ? { events: [...additions, ...s.events] } : s;
+        });
+      },
     }),
     {
       name: "mitiga-events-v1",
       onRehydrateStorage: () => (state) => {
-        if (!state || state.events.length > 0) return;
-        const migrated = migrateLegacyIncident();
-        if (migrated) {
-          state.events = [migrated.event];
+        if (!state) return;
+        // Legacy single-incident migration only applies to a first-run empty list.
+        if (state.events.length === 0) {
+          const migrated = migrateLegacyIncident();
+          if (migrated) state.events = [migrated.event];
+        }
+        // Always ensure the populated demo incident is present, in EVERY browser
+        // and the desktop app — card + full local state — so it's there for
+        // expo/offline demos without login or a server round-trip. Idempotent:
+        // added only if missing (a signed-in client's server copy syncs the same
+        // id, and the local state seed never overwrites an existing copy).
+        ensureDemoIncidentState();
+        if (!state.events.some((e) => e.id === DEMO_EVENT_ID)) {
+          state.events = [DEMO_EVENT, ...state.events];
         }
       },
     },

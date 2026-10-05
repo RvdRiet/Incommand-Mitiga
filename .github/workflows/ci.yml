@@ -21,3 +21,66 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
+
+  smoke:
+    name: DB + storage smoke test
+    runs-on: ubuntu-latest
+    env:
+      # App role (non-superuser) — RLS enforces. Admin role — migrations + seed.
+      DATABASE_URL: postgres://mitiga_app:mitiga_app_dev@localhost:5432/mitiga
+      DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/mitiga
+      REDIS_URL: redis://localhost:6379
+      S3_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: minioadmin
+      S3_SECRET_ACCESS_KEY: minioadmin
+      S3_BUCKET: incommand
+      S3_FORCE_PATH_STYLE: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+
+      # Bring up the same local stack developers use. Postgres runs the SQL in
+      # ./migrations on first init; minio-init creates the bucket.
+      - name: Start Postgres + MinIO + Redis
+        run: docker compose up -d postgres minio minio-init redis
+
+      - name: Wait for Postgres
+        run: |
+          for i in $(seq 1 40); do
+            if docker compose exec -T postgres pg_isready -U postgres -d mitiga >/dev/null 2>&1; then
+              echo "Postgres ready"; exit 0
+            fi
+            echo "waiting for Postgres... ($i)"; sleep 2
+          done
+          echo "Postgres never became ready"; docker compose logs postgres; exit 1
+
+      - name: Run migrations (tracked runner)
+        run: npm run db:migrate
+
+      - name: Wait for MinIO bucket
+        run: |
+          for i in $(seq 1 20); do
+            if docker compose logs minio-init 2>&1 | grep -q "bucket incommand ready"; then
+              echo "MinIO bucket ready"; exit 0
+            fi
+            echo "waiting for MinIO bucket... ($i)"; sleep 2
+          done
+          echo "MinIO bucket not confirmed"; docker compose logs minio minio-init; exit 1
+
+      - name: Seed dev tenant
+        run: npm run db:seed
+
+      - name: Smoke test (DB schema + incident_state + S3 round-trip)
+        run: npm run smoke
+
+      - name: Security + integration tests (RLS, per-module authz, rate limit)
+        run: npm test
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

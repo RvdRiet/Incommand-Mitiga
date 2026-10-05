@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { withTenant } from "@/db/client";
 import { auditLog, icsFormInstances, incidents } from "@/db/schema";
+import { captureError } from "@/lib/observability/logger";
 
 export async function GET(
   _req: Request,
@@ -42,7 +43,8 @@ export async function GET(
     return NextResponse.json(bundle, {
       headers: { "Content-Disposition": `attachment; filename="incident-${id}.json"` },
     });
-  } catch {
+  } catch (e) {
+    await captureError(e, { route: "incident.export", incidentId: id });
     return NextResponse.json({ error: "export_failed" }, { status: 500 });
   }
 }

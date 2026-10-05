@@ -60,7 +60,7 @@ export function StatusBoardsView() {
           </button>
         </div>
         <p className="ic-d4h-header__sub">
-          D4H-style status board — track operational items across columns. Drag workflow via
+          Status board — track operational items across columns. Drag workflow via
           column selector on each card.
         </p>
       </header>

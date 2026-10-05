@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { clientIp, enforceRateLimit } from "@/lib/auth/api-rate-limit";
 import { getWeatherForPoint } from "@/lib/weather";
 
 export async function GET(req: Request) {
+  // PUBLIC data — no auth gate (works with a stale session); IP rate-limit bounds abuse.
+  const limited = await enforceRateLimit(`weather:${clientIp(req)}`, 120, 60);
+  if (limited) return limited;
+
   const url = new URL(req.url);
   const lat = Number(url.searchParams.get("lat"));
   const lng = Number(url.searchParams.get("lng"));

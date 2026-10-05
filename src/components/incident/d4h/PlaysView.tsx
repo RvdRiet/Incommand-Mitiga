@@ -21,7 +21,7 @@ export function PlaysView() {
       <header className="ic-d4h-header">
         <h2 className="ic-d4h-header__title">Operational plays</h2>
         <p className="ic-d4h-header__sub">
-          D4H-style playbooks — one click creates a task list with checklists and logs the
+          Operational playbooks — one click creates a task list with checklists and logs the
           activation. Expand with your own plays over time.
         </p>
         <div className="ic-d4h-tabs">

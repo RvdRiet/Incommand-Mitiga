@@ -21,6 +21,8 @@ export function useModuleAddHandler(moduleSlug: string) {
   const addStatusBoardItem = useIncidentStore((s) => s.addStatusBoardItem);
   const statusBoards = useIncidentStore((s) => s.statusBoards);
   const addContactGroup = useIncidentStore((s) => s.addContactGroup);
+  const addShift = useIncidentStore((s) => s.addShift);
+  const addCertification = useIncidentStore((s) => s.addCertification);
 
   return () => {
     switch (moduleSlug) {
@@ -83,6 +85,12 @@ export function useModuleAddHandler(moduleSlug: string) {
       }
       case "notifications":
         addContactGroup();
+        break;
+      case "rostering":
+        addShift();
+        break;
+      case "certifications":
+        addCertification();
         break;
       case "briefings":
       case "plays":

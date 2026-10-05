@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { enforceRateLimit } from "@/lib/auth/api-rate-limit";
+import { requireSession } from "@/lib/auth/rbac";
 import { planRouteVariants } from "@/lib/maps/route-engine";
 
 const waypointSchema = z.object({
@@ -18,6 +20,12 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  // Proxies an external routing engine — gate to prevent unauthenticated abuse.
+  const session = await requireSession();
+  if (session instanceof NextResponse) return session;
+  const limited = await enforceRateLimit(`planroutes:${session.userId}`, 30, 60);
+  if (limited) return limited;
+
   try {
     const body = bodySchema.parse(await req.json());
     const variants = await planRouteVariants({

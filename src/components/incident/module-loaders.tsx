@@ -85,6 +85,45 @@ export const MODULE_VIEW_LOADERS: Record<
   settings: lazyView(() =>
     import("./views").then((m) => ({ default: m.SettingsView })),
   ),
+  comms: lazyView(() =>
+    import("./CommsView").then((m) => ({ default: m.CommsView })),
+  ),
+  "track-history": lazyView(() =>
+    import("./view-modules/track-history").then((m) => ({ default: m.TrackHistoryView })),
+  ),
+  outages: lazyView(() =>
+    import("./view-modules/outages").then((m) => ({ default: m.OutageMapView })),
+  ),
+  rostering: lazyView(() =>
+    import("./view-modules/rostering").then((m) => ({ default: m.RosteringView })),
+  ),
+  certifications: lazyView(() =>
+    import("./view-modules/certifications").then((m) => ({ default: m.CertificationsView })),
+  ),
+  inventory: lazyView(() =>
+    import("./view-modules/inventory").then((m) => ({ default: m.InventoryView })),
+  ),
+  analytics: lazyView(() =>
+    import("./view-modules/analytics").then((m) => ({ default: m.AnalyticsView })),
+  ),
+  "hub-situation": lazyView(() =>
+    import("./view-modules/area-hub").then((m) => ({ default: m.SituationHubView })),
+  ),
+  "hub-plans": lazyView(() =>
+    import("./view-modules/area-hub").then((m) => ({ default: m.PlansHubView })),
+  ),
+  "hub-operations": lazyView(() =>
+    import("./view-modules/area-hub").then((m) => ({ default: m.OperationsHubView })),
+  ),
+  "hub-people": lazyView(() =>
+    import("./view-modules/area-hub").then((m) => ({ default: m.PeopleHubView })),
+  ),
+  "hub-comms": lazyView(() =>
+    import("./view-modules/area-hub").then((m) => ({ default: m.CommsHubView })),
+  ),
+  "hub-records": lazyView(() =>
+    import("./view-modules/area-hub").then((m) => ({ default: m.RecordsHubView })),
+  ),
 };
 
 export const DefaultModuleView = lazyView(() =>

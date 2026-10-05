@@ -1,0 +1,44 @@
+# LiveKit server config for FIELD / public use (real bodycams over cellular).
+# Replaces the `--dev` flag. Run via docker-compose.field.yml. See docs/LIVEKIT-FIELD.md.
+#
+# ⚠️ You MUST set a real key pair — this server (non-dev) REFUSES TO START unless the
+#    API secret is at least 32 characters (the dev `secret` is rejected). Generate one:
+#      docker run --rm livekit/livekit-server generate-keys
+#    then set LIVEKIT_API_KEY / LIVEKIT_API_SECRET in .env.local to match (the
+#    docker-compose.field.yml override feeds them in via LIVEKIT_KEYS).
+
+port: 7880
+# Bind all interfaces so it's reachable on the LAN and via port-forward/NAT.
+bind_addresses:
+  - ""
+
+rtc:
+  # TCP fallback for ICE — a single port that traverses most NATs/firewalls when
+  # UDP is blocked (common on cellular / guest Wi-Fi). Forward this publicly.
+  tcp_port: 7881
+  # UDP media. Forward this range publicly for best quality; TCP+TURN cover the rest.
+  port_range_start: 50000
+  port_range_end: 50100
+  # Auto-detect the public IP via STUN so candidates advertise a reachable address
+  # when behind NAT. If your public IP is static you can hardcode `node_ip` instead.
+  use_external_ip: true
+
+# Embedded TURN relay — essential for clients on restrictive/cellular networks that
+# can't reach the media ports directly. For real field use, terminate TLS on 443
+# (via `external_tls` behind a reverse proxy, or point domain/tls_port at a cert).
+turn:
+  enabled: true
+  udp_port: 3478
+  # --- TLS TURN (recommended for cellular; needs a domain + cert) ---
+  # domain: turn.your-domain.example
+  # tls_port: 5349
+  # external_tls: true   # set when a reverse proxy (Caddy/nginx) terminates TLS
+
+# Keys are read from env at container start (LIVEKIT_KEYS="key: secret"). This block
+# is only a placeholder — the server will NOT start with it (secret < 32 chars). Set
+# LIVEKIT_API_KEY / LIVEKIT_API_SECRET (secret ≥ 32 chars) before `up`.
+keys:
+  devkey: secret
+
+logging:
+  level: info
