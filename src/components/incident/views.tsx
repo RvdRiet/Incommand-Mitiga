@@ -9,6 +9,7 @@ import { useSession } from "next-auth/react";
 import { useEventId } from "@/context/EventContext";
 import { moduleHref } from "@/lib/navigation/modules";
 import { downloadIncidentExport } from "@/lib/incident/export";
+import { HIDDEN_LOG_KINDS, LEGACY_NOISE_ACTION } from "@/lib/incident/activity-log";
 import { downloadAuditTrailTxt } from "@/lib/incident/audit-export";
 import { parseFormContent } from "@/lib/incident/ics-forms-catalog";
 import { useNow } from "@/lib/devices/presence";
@@ -515,8 +516,6 @@ type ActivityFilter = "all" | "data" | "user" | "audit";
 // Clicks, field focus and page views are deliberately not logged any more; hide any
 // legacy ones so the log reads as a real "who did what, when" record. Legacy entries
 // were mirrored into the audit stream too, so match those actions by prefix.
-const HIDDEN_LOG_KINDS = new Set(["ui", "navigation"]);
-const LEGACY_NOISE_ACTION = /^(Click|Field (focused|changed|updated)|Page viewed)\b/;
 
 type TimelineRow =
   | { id: string; sortAt: string; source: "log"; entry: LogEntry }

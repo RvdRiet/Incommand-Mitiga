@@ -37,9 +37,10 @@
 .ic-cop__ident {
   display: flex;
   align-items: center;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 10px 14px;
   min-width: 260px;
-  flex: 1;
+  flex: 1 1 520px;
 }
 .ic-cop__activation {
   flex: none;
@@ -66,6 +67,7 @@
 }
 .ic-cop__ident-text {
   min-width: 0;
+  flex: 1 1 240px;
 }
 .ic-cop__name {
   margin: 0;
@@ -73,10 +75,8 @@
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.01em;
-  text-wrap: balance;
+  text-wrap: pretty;
   color: var(--ic-text, #0f172a);
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .ic-cop__where {
   margin: 3px 0 0;
@@ -85,6 +85,11 @@
 }
 .ic-cop__stage {
   align-self: center;
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .ic-cop__kpis {

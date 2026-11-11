@@ -24,6 +24,7 @@ import { IconRadio, IconBell, IconBoxes } from "@/components/dashboard/icons";
 import { useEventId, useIncidentStore } from "@/context/EventContext";
 import { useNow } from "@/lib/devices/presence";
 import { dashboardStats } from "@/lib/incident/stats";
+import { isMeaningfulLog } from "@/lib/incident/activity-log";
 import {
   DEFAULT_INVENTORY_REMINDER_DAYS,
   inventorySummary,
@@ -83,6 +84,9 @@ export function DashboardHomeView() {
   const report = useSituationReport();
   const { data: session } = useSession();
   const stats = dashboardStats(state);
+  // Same filter the Logs view uses, so the feed shows meaningful account-attributed
+  // events and not legacy click/focus/navigation noise.
+  const feedLogs = useMemo(() => state.logs.filter(isMeaningfulLog), [state.logs]);
   const inv = inventorySummary(
     state.inventory,
     now,
@@ -375,11 +379,11 @@ export function DashboardHomeView() {
               Log →
             </Link>
           </div>
-          {state.logs.length === 0 ? (
+          {feedLogs.length === 0 ? (
             <p className="ic-empty-hint">No activity logged yet.</p>
           ) : (
             <ul className="ic-cop__feed-list">
-              {state.logs.slice(0, 14).map((e) => (
+              {feedLogs.slice(0, 14).map((e) => (
                 <li key={e.id} className="ic-cop__feed-item">
                   <span className="ic-cop__feed-time">{timeAgo(e.createdAt, now)}</span>
                   <span className="ic-cop__feed-body">

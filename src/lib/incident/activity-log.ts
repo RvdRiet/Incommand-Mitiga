@@ -6,6 +6,22 @@ import { newId, nowIso } from "./id";
 
 export const MAX_ACTIVITY_LOG_ENTRIES = 4000;
 
+/** Log kinds that are pure UI noise (legacy click/focus/page-view capture). */
+export const HIDDEN_LOG_KINDS = new Set<string>(["ui", "navigation"]);
+/** Legacy pre-rework actions/messages to hide (clicks, field focus, page views). */
+export const LEGACY_NOISE_ACTION = /^(Click|Field (focused|changed|updated)|Page viewed)\b/;
+
+/**
+ * Whether a log entry is a meaningful, account-attributed event worth surfacing —
+ * used by BOTH the dashboard "Live activity" feed and the Logs view so they agree
+ * and neither shows legacy click/focus/navigation bloat.
+ */
+export function isMeaningfulLog(entry: { kind?: string | null; message?: string }): boolean {
+  if (HIDDEN_LOG_KINDS.has(entry.kind ?? "system")) return false;
+  if (entry.message && LEGACY_NOISE_ACTION.test(entry.message)) return false;
+  return true;
+}
+
 export type ActivityRecord = {
   message: string;
   tags?: string[];
