@@ -16,6 +16,8 @@ export type OrgPerson = {
   email?: string;
   /** Free-text experience & history: years of service, past deployments, quals gained. */
   experience?: string;
+  /** Small client-resized data URL of the person's photo. */
+  photo?: string;
   addedAt: string;
   /** Last local edit — drives last-write-wins server sync. */
   updatedAt?: string;
@@ -77,6 +79,7 @@ export const useOrgRoster = create<RosterStore>()(
                 phone: sp.phone ?? undefined,
                 email: sp.email ?? undefined,
                 experience: sp.experience ?? undefined,
+                photo: sp.photo ?? undefined,
               });
             }
           }

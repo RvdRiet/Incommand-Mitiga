@@ -3,12 +3,15 @@
 import { useState } from "react";
 
 import { BackLink } from "@/components/ui/BackLink";
+import { initials, resizeImageToDataUrl } from "@/lib/roster/photo";
 import { useOrgRoster, useOrgRosterHydrated } from "@/lib/roster/store";
 
 import { AttendanceManager } from "./AttendanceManager";
+import { PersonQualifications } from "./PersonQualifications";
+import { RosterScheduling } from "./RosterScheduling";
 import { RosterSyncBridge } from "./RosterSyncBridge";
 
-type RosterTab = "roster" | "attendance";
+type RosterTab = "roster" | "scheduling" | "attendance";
 
 export function RosterPage() {
   const hydrated = useOrgRosterHydrated();
@@ -59,6 +62,15 @@ export function RosterPage() {
         <button
           type="button"
           role="tab"
+          aria-selected={tab === "scheduling"}
+          className={`ic-roster__tab${tab === "scheduling" ? " ic-roster__tab--active" : ""}`}
+          onClick={() => setTab("scheduling")}
+        >
+          Scheduling
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={tab === "attendance"}
           className={`ic-roster__tab${tab === "attendance" ? " ic-roster__tab--active" : ""}`}
           onClick={() => setTab("attendance")}
@@ -69,6 +81,8 @@ export function RosterPage() {
 
       {tab === "attendance" ? (
         <AttendanceManager />
+      ) : tab === "scheduling" ? (
+        <RosterScheduling />
       ) : (
         <>
       <section className="dev-registry__register">
@@ -111,19 +125,49 @@ export function RosterPage() {
           {people.map((p) => (
             <li key={p.id} className="ic-roster__person">
               <div className="ic-roster__person-main">
-                <input
-                  className="ic-roster__name"
-                  value={p.name}
-                  onChange={(e) => updatePerson(p.id, { name: e.target.value })}
-                  aria-label="Name"
-                />
-                <input
-                  className="ic-roster__role"
-                  value={p.role}
-                  onChange={(e) => updatePerson(p.id, { role: e.target.value })}
-                  placeholder="Role"
-                  aria-label="Role"
-                />
+                <label className="ic-roster__avatar" title="Add or change photo">
+                  {p.photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.photo} alt={`${p.name}`} className="ic-roster__avatar-img" />
+                  ) : (
+                    <span className="ic-roster__avatar-initials">{initials(p.name)}</span>
+                  )}
+                  <span className="ic-roster__avatar-edit" aria-hidden>
+                    ✎
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    aria-label={`Photo for ${p.name}`}
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        try {
+                          updatePerson(p.id, { photo: await resizeImageToDataUrl(f) });
+                        } catch {
+                          /* unreadable image — ignore */
+                        }
+                      }
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <div className="ic-roster__person-names">
+                  <input
+                    className="ic-roster__name"
+                    value={p.name}
+                    onChange={(e) => updatePerson(p.id, { name: e.target.value })}
+                    aria-label="Name"
+                  />
+                  <input
+                    className="ic-roster__role"
+                    value={p.role}
+                    onChange={(e) => updatePerson(p.id, { role: e.target.value })}
+                    placeholder="Role"
+                    aria-label="Role"
+                  />
+                </div>
               </div>
               <div className="ic-roster__person-meta">
                 <input
@@ -155,10 +199,12 @@ export function RosterPage() {
                   aria-label={`Experience and history for ${p.name}`}
                 />
               </label>
+              <PersonQualifications personId={p.id} />
               <button
                 type="button"
                 className="dev-registry__remove"
                 title="Remove from roster"
+                aria-label="Remove from roster"
                 onClick={() => removePerson(p.id)}
               >
                 ×
