@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 
 import { withTenant } from "@/db/client";
 import { blobs, incidents } from "@/db/schema";
-import { MIN_WRITE_ROLE, requireSession } from "@/lib/auth/rbac";
-import { allowedModulesForRole } from "@/lib/auth/permissions-server";
+import { requireSession, requireWrite } from "@/lib/auth/rbac";
+import { effectiveModulesForUser } from "@/lib/auth/permissions-server";
 import { blobKindModule } from "@/lib/incident/blob-modules";
 import { BLOB_BUCKET, blobKey, presignGet, putBlob } from "@/lib/storage/blob";
 
@@ -23,7 +23,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> },
 ) {
   // Uploading (archiving exports/photos/video) requires a contributor role.
-  const session = await requireSession(MIN_WRITE_ROLE);
+  const session = await requireWrite();
   if (session instanceof NextResponse) return session;
   const tenantId = session.tenantId;
   const { id } = await context.params;
@@ -101,7 +101,7 @@ export async function GET(
   );
 
   // Only surface (and presign) files whose owning module this role may see.
-  const allowed = new Set(await allowedModulesForRole(tenantId, session.role));
+  const allowed = new Set(await effectiveModulesForUser(tenantId, session.roleId, session.userId));
   const visible = rows.filter((b) => allowed.has(blobKindModule(b.kind)));
 
   const withUrls = await Promise.all(
