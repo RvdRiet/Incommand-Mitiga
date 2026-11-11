@@ -13,6 +13,7 @@ import { readFileSync } from "node:fs";
 import postgres from "postgres";
 
 import { generateToken, hashToken, TOKEN_TTL } from "../src/lib/auth/tokens";
+import { seedSystemRoles } from "./lib/seed-system-roles";
 
 function loadEnv(path: string) {
   try {
@@ -59,6 +60,9 @@ async function main() {
 
       const [org] = await tx<{ id: string }[]>`
         insert into organizations (tenant_id, name) values (${tenant.id}, ${orgName}) returning id`;
+
+      // Seed the built-in roles so this new tenant has the role catalogue from day one.
+      await seedSystemRoles(tx, tenant.id);
 
       await tx`
         insert into auth_tokens (tenant_id, purpose, email, token_hash, role, organization_id, expires_at)

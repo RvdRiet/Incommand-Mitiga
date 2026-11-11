@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
 import postgres from "postgres";
 
+import { seedSystemRoles } from "./lib/seed-system-roles";
+
 /**
  * Load DB credentials from the project's env files when run standalone (`npm run
  * db:seed`). Next.js auto-loads these, but a bare tsx script does not — so without
@@ -110,10 +112,23 @@ async function main() {
     const userId = user?.id;
     if (!userId) throw new Error("user insert failed");
 
+    // Built-in roles for this tenant (idempotent), then link the membership to its row.
+    await seedSystemRoles(tx, tenantId);
+
     await tx`
       insert into memberships (tenant_id, user_id, organization_id, role)
       values (${tenantId}, ${userId}, ${orgId}, 'tenant_admin')
       on conflict (user_id, organization_id) do update set role = excluded.role
+    `;
+
+    await tx`
+      update memberships
+      set role_id = r.id
+      from roles r
+      where r.tenant_id = ${tenantId}
+        and r.key = memberships.role::text
+        and memberships.tenant_id = ${tenantId}
+        and memberships.user_id = ${userId}
     `;
 
     // Fixed id + upsert so re-seeding never duplicates this sample incident.

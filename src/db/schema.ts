@@ -50,6 +50,8 @@ export const tenants = pgTable("tenants", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
+  /** First-run gate: false sends admins to the /setup wizard until essentials are done (0018). */
+  setupComplete: boolean("setup_complete").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -84,6 +86,9 @@ export const users = pgTable(
     status: text("status").notNull().default("active"),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
+    // When true, the app forces a password change before anything else (0019).
+    // Set for admin-created accounts handed a temporary password; cleared on change.
+    mustChangePassword: boolean("must_change_password").notNull().default(false),
     tokenVersion: integer("token_version").notNull().default(0),
     failedLoginCount: integer("failed_login_count").notNull().default(0),
     lockedUntil: timestamp("locked_until", { withTimezone: true }),
@@ -143,11 +148,15 @@ export const memberships = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    role: membershipRoleEnum("role").notNull().default("viewer"),
+    // role_id (0012) is authoritative; the enum `role` is a readable mirror, NULL for
+    // custom roles (0014). Resolution prefers role_id.
+    role: membershipRoleEnum("role").default("viewer"),
+    roleId: uuid("role_id").references(() => roles.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     userOrg: uniqueIndex("memberships_user_org").on(t.userId, t.organizationId),
+    roleIdx: index("memberships_role_id_idx").on(t.roleId),
   }),
 );
 
@@ -282,6 +291,35 @@ export const incidentState = pgTable(
 );
 
 /**
+ * Per-tenant roles (0012). The 5 built-ins are seeded as `isSystem` rows; a tenant
+ * can add custom roles in a later phase. Capabilities are explicit flags (not derived
+ * from rank) so a custom role can mix them freely. `rank` orders privilege (higher =
+ * more); the no-escalation guards compare ranks. One stable `key` per (tenant, role).
+ */
+export const roles = pgTable(
+  "roles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    rank: integer("rank").notNull(),
+    isSystem: boolean("is_system").notNull().default(false),
+    canManageUsers: boolean("can_manage_users").notNull().default(false),
+    canManageRoles: boolean("can_manage_roles").notNull().default(false),
+    canWrite: boolean("can_write").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantKey: uniqueIndex("roles_tenant_key").on(t.tenantId, t.key),
+    tenantIdx: index("roles_tenant_idx").on(t.tenantId),
+  }),
+);
+
+/**
  * Per-role module visibility, per tenant. One row per (tenant, role) holding the
  * allowed module slugs. No row = default open (the role sees everything). See
  * migrations/0006_role_permissions.sql.
@@ -292,13 +330,44 @@ export const rolePermissions = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "cascade" }),
-    role: membershipRoleEnum("role").notNull(),
+    // Keyed by the role row (0013) so custom roles can carry permissions too. The enum
+    // `role` is kept (nullable) as a back-reference for the built-ins.
+    roleId: uuid("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+    role: membershipRoleEnum("role"),
     modules: jsonb("modules").notNull().$type<string[]>().$defaultFn(() => []),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
   },
   (t) => ({
-    pk: primaryKey({ columns: [t.tenantId, t.role] }),
+    pk: primaryKey({ columns: [t.roleId] }),
+    tenantIdx: index("role_permissions_tenant_idx").on(t.tenantId),
+  }),
+);
+
+/**
+ * Per-user module overrides (0015). A person's effective access = their role's
+ * allow-list + these grants − these denials. One row per (user, module) that differs
+ * from the role default; no row = inherit the role.
+ */
+export const membershipModuleOverrides = pgTable(
+  "membership_module_overrides",
+  {
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    moduleSlug: text("module_slug").notNull(),
+    effect: text("effect").notNull().$type<"allow" | "deny">(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.userId, t.moduleSlug] }),
+    tenantIdx: index("mmo_tenant_idx").on(t.tenantId),
   }),
 );
 
@@ -368,11 +437,64 @@ export const orgPersonnel = pgTable(
     phone: text("phone"),
     email: text("email"),
     experience: text("experience"),
+    photo: text("photo"), // small client-resized data URL (0016)
     addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     tenantIdx: index("org_personnel_tenant_idx").on(t.tenantId),
+  }),
+);
+
+/** Org-level qualifications per roster person (0016). Source of truth; events read these. */
+export const orgQualifications = pgTable(
+  "org_qualifications",
+  {
+    id: uuid("id").primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => orgPersonnel.id, { onDelete: "cascade" }),
+    name: text("name").notNull().default(""),
+    level: text("level").notNull().default(""),
+    issuer: text("issuer").notNull().default(""),
+    issuedAt: text("issued_at").notNull().default(""),
+    expiresAt: text("expires_at").notNull().default(""),
+    reference: text("reference").notNull().default(""),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index("org_quals_tenant_idx").on(t.tenantId),
+    personIdx: index("org_quals_person_idx").on(t.personId),
+  }),
+);
+
+/** Org-level shifts: the standing master schedule, assigned against org personnel. */
+export const orgShifts = pgTable(
+  "org_shifts",
+  {
+    id: uuid("id").primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => orgPersonnel.id, { onDelete: "cascade" }),
+    date: text("date").notNull().default(""),
+    startTime: text("start_time").notNull().default(""),
+    endTime: text("end_time").notNull().default(""),
+    role: text("role").notNull().default(""),
+    location: text("location").notNull().default(""),
+    notes: text("notes").notNull().default(""),
+    status: text("status").notNull().default("scheduled"),
+    addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index("org_shifts_tenant_idx").on(t.tenantId),
+    personIdx: index("org_shifts_person_idx").on(t.personId),
   }),
 );
 
