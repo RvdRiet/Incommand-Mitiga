@@ -432,3 +432,71 @@
 .ic-form-editor--fema .fema-ics-form__block-title {
   font-size: 12px;
 }
+
+/* ===== ICS-201 Block 4 — satellite map sketch ===== */
+.ic-mapsketch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ic-mapsketch__frame {
+  position: relative;
+  margin: 0;
+  border: 1px solid var(--ic-border, #cbd5e1);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0b1220;
+}
+.ic-mapsketch__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+.ic-mapsketch__refresh {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.82);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ic-mapsketch__refresh:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.95);
+}
+.ic-mapsketch__refresh:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.ic-mapsketch__empty {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  min-height: 180px;
+  padding: 20px;
+  text-align: center;
+  border: 1px dashed var(--ic-border-strong, #cbd5e1);
+  border-radius: 8px;
+  background: var(--ic-surface-muted, #f8fafc);
+  color: var(--ic-muted, #64748b);
+  font-size: 0.8125rem;
+}
+.ic-mapsketch__error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.75rem;
+}
+.ic-mapsketch__notes {
+  min-height: 48px;
+}
+
+/* Hide the interactive refresh control in the exported PDF clone. */
+.fema-ics-form--pdf-export .ic-mapsketch__refresh {
+  display: none;
+}

@@ -64,7 +64,7 @@ body {
 .ic-topbar-nav {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px 8px;
   min-width: 0;
   padding-left: 16px;
@@ -509,13 +509,56 @@ a.ic-topbar__icon {
     padding-left: 12px;
   }
 
+  /* The event name takes the remaining space and truncates instead of pushing
+     the right-hand controls off-screen. */
+  .ic-topbar-nav__current,
+  .ic-topbar-nav__link {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+
   .ic-topbar-nav__chip {
     padding: 5px 10px;
     font-size: 0.75rem;
+    flex-shrink: 0;
   }
 
   .ic-topbar-nav__hint {
     display: none !important;
+  }
+}
+
+/* Phones: strip the top bar to logo · event name · account. The timer, save state
+   and activation level all appear on the dashboard's event header, so dropping the
+   duplicates here keeps the fixed-height bar uncluttered and legible. */
+@media (max-width: 560px) {
+  .ic-topbar {
+    padding: 0 8px;
+    gap: 8px;
+  }
+
+  .ic-topbar__left {
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .ic-topbar-nav {
+    padding-left: 10px;
+  }
+
+  /* One clear breadcrumb on phones: "← Events  <where you are>". Drop the middle
+     event-name link + separators so both labels don't truncate to single letters. */
+  .ic-topbar-nav__link,
+  .ic-topbar-nav__sep {
+    display: none;
+  }
+
+  .ic-topbar__right .ic-topbar__timer,
+  .ic-topbar__right .ic-save-indicator,
+  .ic-topbar-nav .ic-activation-pill {
+    display: none;
   }
 }
 
@@ -1561,6 +1604,248 @@ a.ic-topbar__icon {
   min-height: 0;
   display: flex;
   overflow: hidden;
+}
+
+/* ===== Floating tool palette (map-first) ===== */
+.ic-map-palette {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.ic-map-palette__btn {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ic-text-secondary);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.ic-map-palette__btn:hover {
+  background: var(--ic-surface-muted);
+  color: var(--ic-text);
+}
+.ic-map-palette__btn:focus-visible {
+  outline: 2px solid var(--ic-primary);
+  outline-offset: 1px;
+}
+.ic-map-palette__btn--active {
+  background: var(--ic-primary);
+  border-color: var(--ic-primary);
+  color: #fff;
+}
+.ic-map-palette__btn--active:hover {
+  background: var(--ic-primary);
+  color: #fff;
+}
+.ic-map-palette__divider {
+  height: 1px;
+  margin: 2px 4px;
+  background: var(--ic-border);
+}
+
+/* ===== Contextual tool control bar (bottom-center) ===== */
+.ic-map-toolpanel {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: calc(100% - 24px);
+  padding: 8px 10px 8px 14px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid var(--ic-border);
+  border-radius: 999px;
+  box-shadow: var(--shadow-lg);
+}
+.ic-map-toolpanel__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  color: var(--ic-text);
+  white-space: nowrap;
+}
+.ic-map-toolpanel__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--ic-primary-muted);
+  color: var(--ic-primary);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-xs);
+  font-weight: var(--fw-bold);
+}
+.ic-map-toolpanel__field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-sm);
+  color: var(--ic-text-secondary);
+}
+.ic-map-toolpanel__field input {
+  width: 72px;
+  padding: 6px 8px;
+  border: 1px solid var(--ic-border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.ic-map-toolpanel__field input:disabled {
+  opacity: 0.5;
+}
+.ic-map-toolpanel__unit {
+  color: var(--ic-muted);
+}
+.ic-map-toolpanel__btn {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--ic-border-strong);
+  background: var(--ic-surface);
+  color: var(--ic-text);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), opacity var(--transition);
+}
+.ic-map-toolpanel__btn--primary {
+  background: var(--ic-primary);
+  border-color: var(--ic-primary);
+  color: #fff;
+}
+.ic-map-toolpanel__btn--primary:hover:not(:disabled) {
+  background: #0b7d73;
+}
+.ic-map-toolpanel__btn--ghost {
+  background: transparent;
+}
+.ic-map-toolpanel__btn:hover:not(:disabled) {
+  border-color: var(--ic-muted);
+}
+.ic-map-toolpanel__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ===== Layers panel header + collapse ===== */
+.ic-map-layers__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ic-map-layers__collapse {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ic-muted);
+  cursor: pointer;
+  transform: rotate(90deg);
+}
+.ic-map-layers__collapse:hover {
+  background: var(--ic-surface-muted);
+  color: var(--ic-text);
+}
+.ic-map-layers-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--ic-text);
+  cursor: pointer;
+}
+.ic-map-layers-toggle:hover {
+  background: #fff;
+}
+
+/* Dark basemap variants for the floating controls */
+.ic-map-view--dark .ic-map-palette,
+.ic-map-view--dark .ic-map-toolpanel,
+.ic-map-view--dark .ic-map-layers-toggle {
+  background: rgba(17, 24, 39, 0.94);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #e5e7eb;
+}
+.ic-map-view--dark .ic-map-palette__btn {
+  color: #cbd5e1;
+}
+.ic-map-view--dark .ic-map-palette__btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.ic-map-view--dark .ic-map-toolpanel__hint,
+.ic-map-view--dark .ic-map-layers-toggle {
+  color: #e5e7eb;
+}
+.ic-map-view--dark .ic-map-toolpanel__btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #e5e7eb;
+}
+.ic-map-view--dark .ic-map-toolpanel__btn--primary {
+  background: var(--ic-primary);
+  border-color: var(--ic-primary);
+  color: #fff;
+}
+.ic-map-view--dark .ic-map-toolpanel__field input {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #e5e7eb;
+}
+
+/* Phones: palette becomes a bottom horizontal strip; tool bar sits above it. */
+@media (max-width: 640px) {
+  .ic-map-palette {
+    top: auto;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    flex-direction: row;
+  }
+  .ic-map-palette__divider {
+    width: 1px;
+    height: auto;
+    margin: 4px 2px;
+  }
+  .ic-map-toolpanel {
+    bottom: 74px;
+  }
 }
 
 /* Draggable route planner popout */
@@ -3439,4 +3724,192 @@ a.ic-topbar__icon {
   .ic-page-head__desc {
     display: none;
   }
+}
+
+/* ===== First-run setup wizard ===== */
+.ic-setup-steps {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ic-setup-step {
+  flex: 1 1 160px;
+}
+.ic-setup-step > button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: transparent;
+  color: var(--text, #e5e7eb);
+  cursor: default;
+}
+.ic-setup-step > button:not(:disabled) {
+  cursor: pointer;
+}
+.ic-setup-step--active > button {
+  border-color: var(--accent, #35c5a8);
+  box-shadow: inset 0 0 0 1px var(--accent, #35c5a8);
+}
+.ic-setup-step__num {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted, #9ca3af);
+}
+.ic-setup-step--active .ic-setup-step__num {
+  background: var(--accent, #35c5a8);
+  color: #0b1220;
+}
+.ic-setup-step--done .ic-setup-step__num {
+  background: rgba(53, 197, 168, 0.2);
+  color: var(--accent, #35c5a8);
+}
+.ic-setup-step__label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.ic-setup-step__label strong {
+  font-size: 0.875rem;
+}
+.ic-setup-step__label span {
+  font-size: 0.6875rem;
+  color: var(--muted, #9ca3af);
+}
+.ic-setup-panel {
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+  padding: 20px 22px;
+  background: var(--surface, rgba(255, 255, 255, 0.02));
+}
+
+/* ===== Task assignee picker (on the task card) ===== */
+.ic-task-card__assignee {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.ic-task-card__assignee-icon {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ic-primary-muted, #ccfbf1);
+  color: var(--ic-primary, #0d9488);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.ic-task-card__assignee input {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 7px;
+  border: 1px solid var(--ic-border, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  font-size: var(--text-sm, 0.8125rem);
+  background: var(--ic-surface, #fff);
+}
+
+/* ===== "My tasks" dashboard card ===== */
+.ic-mytasks {
+  border: 1px solid var(--ic-border, #e2e8f0);
+  border-radius: var(--radius-lg, 14px);
+  background: var(--ic-surface, #fff);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  padding: 14px 18px;
+}
+.ic-mytasks__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.ic-mytasks__head h3 {
+  margin: 0;
+  font-size: var(--text-md, 0.9375rem);
+  font-weight: var(--fw-bold, 700);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ic-mytasks__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--ic-primary, #0d9488);
+  color: #fff;
+  font-size: var(--text-xs, 0.6875rem);
+  font-weight: 700;
+}
+.ic-mytasks__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ic-mytasks__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: var(--radius-md, 10px);
+}
+.ic-mytasks__item:hover {
+  background: var(--ic-surface-muted, #f8fafc);
+}
+.ic-mytasks__pri {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ic-muted-light, #94a3b8);
+}
+.ic-mytasks__pri--urgent {
+  background: #dc2626;
+}
+.ic-mytasks__pri--high {
+  background: #f59e0b;
+}
+.ic-mytasks__pri--normal {
+  background: #2563eb;
+}
+.ic-mytasks__pri--low {
+  background: #94a3b8;
+}
+.ic-mytasks__title {
+  flex: 1;
+  min-width: 0;
+  font-weight: var(--fw-semibold, 600);
+  font-size: var(--text-base, 0.875rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ic-mytasks__meta {
+  flex: 0 0 auto;
+  font-size: var(--text-xs, 0.6875rem);
+  color: var(--ic-muted, #64748b);
 }

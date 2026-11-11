@@ -69,10 +69,11 @@
 }
 .ic-cop__name {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: clamp(1.2rem, 1rem + 1vw, 1.5rem);
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.15;
   letter-spacing: -0.01em;
+  text-wrap: balance;
   color: var(--ic-text, #0f172a);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -534,6 +535,24 @@
   }
   .ic-cop__status {
     flex-direction: column;
+  }
+}
+
+/* Phones: stack the event-identity row so the title gets the full width (no hard
+   wrapping) and the phase selector + Export drop to their own full-width line. */
+@media (max-width: 640px) {
+  .ic-cop__ident {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    min-width: 0;
+  }
+  .ic-cop__stage {
+    align-self: stretch;
+    justify-content: space-between;
+  }
+  .ic-cop__sitrep-btn {
+    flex: 1 1 auto;
   }
 }
 

@@ -150,6 +150,19 @@
   .fema-ics-form__table-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  /* Data tables: size columns to their content and let the wrapper scroll
+     horizontally, instead of width:100% crushing every column into an
+     unreadable, hard-wrapped sliver. Narrow tables (few columns) still fill
+     the width because width:100% wins when max-content is smaller. */
+  .ic-table {
+    min-width: max-content;
+  }
+  .ic-table th,
+  .ic-table td {
+    white-space: nowrap;
   }
 
   /* Module toolbar + top bar controls wrap instead of overflowing */
@@ -172,6 +185,65 @@
   /* Wide dashboard widgets already collapse; make the weather meta breathe */
   .ic-weather-widget__meta {
     gap: 6px;
+  }
+}
+
+/* ---- Responsive card tables + admin header (≤640px) ----
+   Some tables (notably the admin consoles) have more columns than fit a phone,
+   and aren't inside a horizontal-scroll wrapper — so columns and action buttons
+   get clipped off the right edge. Opt a table into `.ic-rtable` and give each
+   <td> a `data-label`, and on phones each row becomes a self-contained card with
+   the column name beside its value. Nothing changes on desktop. */
+@media (max-width: 640px) {
+  /* Admin page headers stack the title above the nav instead of cramming both
+     onto one row (the fluid heading is large on phones). */
+  .ic-admin-head {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+
+  .ic-rtable,
+  .ic-rtable tbody {
+    display: block;
+    width: 100%;
+  }
+  .ic-rtable thead {
+    /* Column names move into each cell's data-label, so hide the header row. */
+    display: none;
+  }
+  .ic-rtable tr {
+    display: block;
+    border: 1px solid var(--border, var(--ic-border, #e2e8f0));
+    border-radius: 10px;
+    padding: 4px 2px;
+    margin-bottom: 10px;
+  }
+  .ic-rtable td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    white-space: normal !important;
+    border-bottom: none !important;
+  }
+  .ic-rtable td::before {
+    content: attr(data-label);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted, var(--ic-muted, #64748b));
+    flex: 0 0 auto;
+  }
+  /* Cells with an empty label (e.g. an actions column) take the full width and
+     don't render a stray label chip. */
+  .ic-rtable td[data-label=""]::before,
+  .ic-rtable td:not([data-label])::before {
+    content: none;
+  }
+  .ic-rtable td > select {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 }
 

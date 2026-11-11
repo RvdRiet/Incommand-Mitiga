@@ -704,6 +704,171 @@
   background: rgba(13, 148, 136, 0.05);
 }
 
+/* ===== In-event person view (live-linked to the org roster) ===== */
+.ic-person-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ic-person-expand {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ic-text-muted, #6b7280);
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 2px;
+  transition: transform 0.12s ease;
+}
+.ic-person-expand--open {
+  transform: rotate(90deg);
+  color: var(--ic-primary, #0d9488);
+}
+.ic-person-detail-row > td {
+  background: var(--ic-surface-2, rgba(13, 148, 136, 0.04));
+  padding: 0;
+}
+.ic-person-detail {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ic-person-detail__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ic-person-detail__photo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+.ic-person-detail__photo--initials {
+  display: grid;
+  place-items: center;
+  background: var(--ic-accent-soft, #e6f0ee);
+  color: var(--ic-accent, #0d9488);
+  font-weight: 700;
+  font-size: 0.8125rem;
+}
+.ic-person-detail__id {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+.ic-person-detail__name {
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+.ic-person-detail__role {
+  font-size: 0.8125rem;
+  color: var(--ic-text-muted, #6b7280);
+}
+.ic-person-detail__meta {
+  font-size: 0.6875rem;
+  color: var(--ic-text-muted, #6b7280);
+}
+.ic-person-detail__linked {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--ic-accent, #0d9488);
+  background: var(--ic-accent-soft, #e6f0ee);
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+.ic-person-detail__experience {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ic-text, #374151);
+  line-height: 1.4;
+}
+.ic-person-detail__cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+.ic-person-detail__h {
+  margin: 0 0 5px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ic-text-muted, #6b7280);
+}
+.ic-person-detail__none,
+.ic-person-detail__missing {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ic-text-muted, #6b7280);
+}
+.ic-person-detail__missing {
+  padding: 10px 14px;
+}
+.ic-person-detail__quals,
+.ic-person-detail__shifts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ic-person-detail__qual {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+}
+.ic-person-detail__qual-name {
+  font-weight: 600;
+}
+.ic-person-detail__qual-level {
+  color: var(--ic-text-muted, #6b7280);
+}
+.ic-person-detail__flag {
+  font-size: 0.625rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--ic-text-muted, #6b7280);
+}
+.ic-person-detail__flag--soon {
+  color: #b45309;
+  background: #fef3c7;
+}
+.ic-person-detail__flag--past {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+.ic-person-detail__shift {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.75rem;
+}
+.ic-person-detail__shift-date {
+  font-weight: 600;
+  min-width: 90px;
+}
+.ic-person-detail__shift-time {
+  color: var(--ic-text-muted, #6b7280);
+  flex: 1;
+}
+.ic-person-detail__shift-status {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--ic-text-muted, #6b7280);
+}
+
 /* ===== Rostering & fatigue module ===== */
 .ic-roster-mod {
   padding: 16px;
