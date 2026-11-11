@@ -5,6 +5,7 @@
  */
 const KIND_MODULE: Record<string, string> = {
   ics_pdf: "forms",
+  ics_form_map: "forms",
   sitrep_txt: "briefings",
   audit_txt: "logs",
   incident_json: "library",
