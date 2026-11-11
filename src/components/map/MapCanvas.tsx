@@ -672,9 +672,11 @@ const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(function MapCanvas
           attributionControl: { compact: true },
         });
 
+        // Bottom-left keeps zoom + compass clear of the top-left basemap switcher,
+        // the left tool palette (vertically centered) and the top-right layers panel.
         map.addControl(
           new maplibregl.NavigationControl({ showCompass: true, visualizePitch: false }),
-          "top-right",
+          "bottom-left",
         );
 
         // Readiness is driven by the poll effect below (which watches the live map

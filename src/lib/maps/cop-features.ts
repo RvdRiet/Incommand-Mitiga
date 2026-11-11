@@ -1,5 +1,6 @@
 import type { Feature, FeatureCollection, Point } from "geojson";
 
+import { isModuleInEdition } from "@/lib/editions";
 import type {
   DamageRecord,
   FieldUnit,
@@ -28,6 +29,21 @@ export const COP_LAYERS: CopLayerDef[] = [
   { key: "road", label: "Road Damages", color: "#d97706" },
   { key: "resources", label: "Resource Requests", color: "#0d9488" },
 ];
+
+/** The module slug that owns each COP layer, so layers hide when their module is out of edition. */
+export const COP_LAYER_MODULE: Record<CopLayerKey, string> = {
+  units: "comms",
+  personnel: "personnel",
+  shelters: "shelters",
+  damage: "damage-assessment",
+  road: "road-damages",
+  resources: "resource-requests",
+};
+
+/** COP layers whose owning module is in the active edition — drives the map legend + layer panel. */
+export function editionCopLayers(): CopLayerDef[] {
+  return COP_LAYERS.filter((l) => isModuleInEdition(COP_LAYER_MODULE[l.key]));
+}
 
 export type CopData = {
   fieldUnits: FieldUnit[];

@@ -16,6 +16,7 @@ import {
 } from "@/lib/maps/routes-geojson";
 import {
   COP_LAYERS,
+  editionCopLayers,
   buildCopFeatures,
   copCounts,
   type CopLayerKey,
@@ -23,6 +24,7 @@ import {
 import { useDeviceRegistry } from "@/lib/devices/store";
 import { devicePresence, offlineThresholdMs, useNow } from "@/lib/devices/presence";
 import { IconTarget } from "@/components/ui/icons";
+import { IconLayers, IconChevron } from "@/components/dashboard/icons";
 import { useUnitTelemetry } from "./useUnitTelemetry";
 
 import MapCanvas, {
@@ -30,7 +32,9 @@ import MapCanvas, {
   type MapDrawMode,
   type MapDrawResult,
 } from "./MapCanvas";
-import { MapDrawingToolbar, type MapTool } from "./MapDrawingToolbar";
+import { type MapTool } from "./MapDrawingToolbar";
+import { MapToolPalette } from "./MapToolPalette";
+import { MapToolPanel } from "./MapToolPanel";
 import { MapRouteFloatingPanel } from "./MapRouteFloatingPanel";
 import { MapRouteInfoPanel } from "./MapRouteInfoPanel";
 import {
@@ -72,8 +76,17 @@ export function EventMapView() {
   const [roadDamagePlotted, setRoadDamagePlotted] = useState(0);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [canSaveRoute, setCanSaveRoute] = useState(false);
+  // Start collapsed on phones so the map (the operating picture) gets the screen;
+  // open by default on larger screens. EventMapView is client-only (ssr:false), so
+  // window is available at first render.
+  const [layersOpen, setLayersOpen] = useState(
+    () => typeof window === "undefined" || window.innerWidth > 640,
+  );
+  // Only COP layers whose owning module is in the active edition (e.g. Field Units is
+  // hidden when Live Ops comms is out). Drives the layer panel, counts and plotted overlays.
+  const visibleCopLayers = useMemo(() => editionCopLayers(), []);
   const [copEnabled, setCopEnabled] = useState<Set<CopLayerKey>>(
-    () => new Set(COP_LAYERS.map((l) => l.key)),
+    () => new Set(visibleCopLayers.map((l) => l.key)),
   );
   const { theme: basemapTheme, toggleTheme: toggleBasemapTheme } = useMapBasemapTheme();
 
@@ -127,8 +140,8 @@ export function EventMapView() {
     [copData, unitsLocatable],
   );
   const totalCopRecords = useMemo(
-    () => COP_LAYERS.reduce((n, l) => n + copCountsMap[l.key], 0),
-    [copCountsMap],
+    () => visibleCopLayers.reduce((n, l) => n + copCountsMap[l.key], 0),
+    [copCountsMap, visibleCopLayers],
   );
   const copFeatures = useMemo(
     () => buildCopFeatures(copData, copEnabled),
@@ -446,42 +459,44 @@ export function EventMapView() {
 
   return (
     <section className={`ic-map-view${basemapTheme === "dark" ? " ic-map-view--dark" : ""}`}>
-      <MapDrawingToolbar
-        basemapTheme={basemapTheme}
-        onBasemapThemeToggle={toggleBasemapTheme}
-        tool={tool}
-        onToolChange={selectTool}
-        polygonVertexCount={polygonVerts}
-        onFinishPolygon={() => {
-          if (mapRef.current?.finishPolygon()) setTool("none");
-        }}
-        onUndoVertex={() => mapRef.current?.undoPolygonVertex()}
-        onCancelDraw={() => {
-          cancelDraw();
-          setTool("none");
-        }}
-        circleCenterSet={circleCenterSet}
-        circleRadiusMeters={circleRadiusMeters}
-        onCircleRadiusChange={(meters) => {
-          setCircleRadiusMeters(meters);
-          mapRef.current?.setCircleRadiusMeters(meters);
-        }}
-        onApplyCircle={() => {
-          if (mapRef.current?.applyCircle()) setTool("none");
-        }}
-        roadDamagePlotted={roadDamagePlotted}
-        onFinishRoadDamage={() => selectTool("none")}
-      />
-
       <div className="ic-map-view__body">
-        {mapAnnotations.length > 0 || supplyRoutes.length > 0 || totalCopRecords > 0 ? (
+        <MapToolPalette
+          tool={tool}
+          onToolChange={selectTool}
+          basemapTheme={basemapTheme}
+          onBasemapThemeToggle={toggleBasemapTheme}
+        />
+
+        {(mapAnnotations.length > 0 || supplyRoutes.length > 0 || totalCopRecords > 0) && !layersOpen ? (
+          <button
+            type="button"
+            className="ic-map-layers-toggle"
+            onClick={() => setLayersOpen(true)}
+            title="Show layers"
+          >
+            <IconLayers /> Layers
+          </button>
+        ) : null}
+
+        {(mapAnnotations.length > 0 || supplyRoutes.length > 0 || totalCopRecords > 0) && layersOpen ? (
           <aside className="ic-map-layers" aria-label="Map layers">
-            <h3 className="ic-map-layers__title">Layers</h3>
+            <div className="ic-map-layers__head">
+              <h3 className="ic-map-layers__title">Layers</h3>
+              <button
+                type="button"
+                className="ic-map-layers__collapse"
+                onClick={() => setLayersOpen(false)}
+                aria-label="Hide layers panel"
+                title="Hide"
+              >
+                <IconChevron />
+              </button>
+            </div>
             {totalCopRecords > 0 ? (
               <div className="ic-map-layers__cop">
                 <h4 className="ic-map-layers__subtitle">Operational picture</h4>
                 <ul className="ic-map-layers__toggles">
-                  {COP_LAYERS.map((l) => {
+                  {visibleCopLayers.map((l) => {
                     const count = copCountsMap[l.key];
                     return (
                       <li key={l.key}>
@@ -632,6 +647,30 @@ export function EventMapView() {
               : undefined
           }
           onRouteLineClick={handleRouteLineClick}
+        />
+
+        <MapToolPanel
+          tool={tool}
+          onCancel={() => {
+            cancelDraw();
+            setTool("none");
+          }}
+          polygonVertexCount={polygonVerts}
+          onFinishPolygon={() => {
+            if (mapRef.current?.finishPolygon()) setTool("none");
+          }}
+          onUndoVertex={() => mapRef.current?.undoPolygonVertex()}
+          circleCenterSet={circleCenterSet}
+          circleRadiusMeters={circleRadiusMeters}
+          onCircleRadiusChange={(meters) => {
+            setCircleRadiusMeters(meters);
+            mapRef.current?.setCircleRadiusMeters(meters);
+          }}
+          onApplyCircle={() => {
+            if (mapRef.current?.applyCircle()) setTool("none");
+          }}
+          roadDamagePlotted={roadDamagePlotted}
+          onFinishRoadDamage={() => selectTool("none")}
         />
 
         {selectedRoute && tool !== "route" ? (

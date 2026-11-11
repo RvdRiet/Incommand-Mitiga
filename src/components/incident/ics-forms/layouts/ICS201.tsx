@@ -12,6 +12,7 @@ import {
   FemaTable,
   useTableField,
 } from "../primitives";
+import { IcsMapSketch } from "../IcsMapSketch";
 
 const RESOURCE_COLS = ["resource", "identifier", "ordered", "eta", "arrived", "notes"];
 const RESOURCE_LABELS: Record<string, string> = {
@@ -86,12 +87,7 @@ export function ICS201Layout({ fields, setField }: FemaLayoutProps) {
     <FemaShell title="INCIDENT BRIEFING (ICS 201)" subtitle="ICS 201" version="Version 3.0">
       <section className="fema-ics-form__page">
         <FemaIncidentHeader fields={fields} onChange={setField} />
-        <FemaTextArea
-          label="4. Map/Sketch (include sketch, showing the total area of operations, the incident site/area, impacted and threatened areas, overflight results, trajectories, impacted shorelines, or other graphics depicting situational status and resource assignment):"
-          value={fields.mapSketch ?? ""}
-          onChange={(v) => setField("mapSketch", v)}
-          map
-        />
+        <IcsMapSketch fields={fields} setField={setField} />
         <FemaTextArea
           label="5. Situation Summary and Health and Safety Briefing (for briefings or transfer of command): Recognize potential incident Health and Safety Hazards and develop necessary measures (remove hazard, provide personal protective equipment, warn people of the hazard) to protect responders from those hazards."
           value={fields.situationSummary ?? ""}

@@ -1,6 +1,6 @@
 import type { Feature, FeatureCollection, Point } from "geojson";
 
-import { mapStyleForTheme } from "./basemap-theme";
+import { mapStyleFor, type MapBasemapLayer } from "./basemap-theme";
 
 /**
  * Render a throwaway, off-screen MapLibre map and grab it as a PNG data-URL for
@@ -21,6 +21,12 @@ export async function captureIncidentMapImage(opts: {
   width?: number;
   height?: number;
   timeoutMs?: number;
+  /** Basemap imagery: "streets" (default, SITREP COP), "satellite" or "hybrid". */
+  layer?: MapBasemapLayer;
+  /** Output format. JPEG is far smaller — use it when the image is persisted (localStorage/DB). */
+  format?: "png" | "jpeg";
+  /** JPEG quality 0–1 (ignored for PNG). */
+  quality?: number;
 }): Promise<string | null> {
   const {
     center,
@@ -30,6 +36,9 @@ export async function captureIncidentMapImage(opts: {
     width = 960,
     height = 540,
     timeoutMs = 9000,
+    layer = "streets",
+    format = "png",
+    quality = 0.75,
   } = opts;
   if (typeof window === "undefined" || typeof document === "undefined") return null;
 
@@ -46,7 +55,7 @@ export async function captureIncidentMapImage(opts: {
     // versions' MapOptions type — it's REQUIRED for getCanvas().toDataURL() to work.
     map = new maplibregl.Map({
       container,
-      style: mapStyleForTheme("light"),
+      style: mapStyleFor(layer, "light"),
       center,
       zoom,
       interactive: false,
@@ -110,7 +119,10 @@ export async function captureIncidentMapImage(opts: {
     map.triggerRepaint();
     await new Promise((r) => requestAnimationFrame(() => r(null)));
 
-    const dataUrl = map.getCanvas().toDataURL("image/png");
+    const dataUrl =
+      format === "jpeg"
+        ? map.getCanvas().toDataURL("image/jpeg", quality)
+        : map.getCanvas().toDataURL("image/png");
     return dataUrl && dataUrl.length > 2000 ? dataUrl : null;
   } catch {
     return null;
