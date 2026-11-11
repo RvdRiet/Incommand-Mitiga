@@ -33,6 +33,25 @@ export const authGhostBtn: CSSProperties = {
   cursor: "pointer",
 };
 
+/**
+ * The auth inputs/buttons above are built for a dark palette (`--accent/--text/
+ * --muted/--border/--surface`), which the app's light pages don't define — so on a
+ * plain page the inputs render dark-on-dark and the primary button has no fill.
+ * AuthShell supplies that palette + a dark full-height background so every auth page
+ * (login, invite, reset) is one cohesive, legible dark screen. Shared with the setup
+ * wizard's console look.
+ */
+export const authTheme: CSSProperties = {
+  ["--accent" as string]: "#35c5a8",
+  ["--text" as string]: "#e5e7eb",
+  ["--muted" as string]: "#9ca3af",
+  ["--border" as string]: "rgba(255,255,255,0.14)",
+  ["--surface" as string]: "rgba(255,255,255,0.03)",
+  background: "#0b1220",
+  color: "var(--text)",
+  minHeight: "100vh",
+};
+
 export function AuthShell({
   title,
   subtitle,
@@ -43,12 +62,24 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <main style={{ maxWidth: 420, margin: "4rem auto", padding: "0 16px" }}>
-      <h1 style={{ marginTop: 0 }}>{title}</h1>
-      {subtitle ? <p style={{ color: "var(--muted)" }}>{subtitle}</p> : null}
-      {children}
-    </main>
+    <div style={authTheme}>
+      <main style={{ maxWidth: 420, margin: "0 auto", padding: "4rem 16px" }}>
+        <h1 style={{ marginTop: 0 }}>{title}</h1>
+        {subtitle ? <p style={{ color: "var(--muted)" }}>{subtitle}</p> : null}
+        {children}
+      </main>
+    </div>
   );
+}
+
+/**
+ * Dark full-height console wrapper for pages built from the dark-palette auth
+ * components (the admin Roles/Users screens, which use authInput + the --accent/
+ * --text/--border tokens). Without it those inputs render dark-on-light and the
+ * accent highlight disappears. Matches the login + setup-wizard look.
+ */
+export function AuthConsole({ children }: { children: React.ReactNode }) {
+  return <div style={authTheme}>{children}</div>;
 }
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -61,7 +92,11 @@ export function Field({ label, children }: { label: string; children: React.Reac
 }
 
 export function ErrorText({ children }: { children: React.ReactNode }) {
-  return children ? <div style={{ color: "#fca5a5", fontSize: 14 }}>{children}</div> : null;
+  return children ? (
+    <div role="alert" style={{ color: "#fca5a5", fontSize: 14 }}>
+      {children}
+    </div>
+  ) : null;
 }
 
 export type Tenant = { id: string; name: string; slug: string };

@@ -76,4 +76,28 @@ describe.skipIf(!adminUrl || !appUrl)("RLS tenant isolation", () => {
     const rows = await app<{ id: string }[]>`select id from incidents where id in (${incA}, ${incB})`;
     expect(rows.length).toBe(0);
   });
+
+  // S3: the state-sync route's ensureIncident must not graft one tenant's cached
+  // incident onto another tenant. Its "foreign" detection = an RLS-scoped
+  // `on conflict do nothing returning` that comes back empty for an id owned elsewhere.
+  it("ensureIncident treats another tenant's incident id as foreign (empty returning)", async () => {
+    const foreign = await app.begin(async (tx) => {
+      await tx`select set_config('app.tenant_id', ${tB}, true)`;
+      return tx<{ id: string }[]>`
+        insert into incidents (id, tenant_id, organization_id, name)
+        values (${incA}, ${tB}, ${orgB}, 'graft')
+        on conflict do nothing returning id`;
+    });
+    expect(foreign.length).toBe(0); // conflict on incA (owned by tA) ⇒ route returns 404
+
+    const freshId = randomUUID();
+    const fresh = await app.begin(async (tx) => {
+      await tx`select set_config('app.tenant_id', ${tB}, true)`;
+      return tx<{ id: string }[]>`
+        insert into incidents (id, tenant_id, organization_id, name)
+        values (${freshId}, ${tB}, ${orgB}, 'new')
+        on conflict do nothing returning id`;
+    });
+    expect(fresh.length).toBe(1); // genuinely new ⇒ "ok"
+  });
 });

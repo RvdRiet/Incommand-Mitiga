@@ -16,13 +16,20 @@ export type AuthAction =
   | "auth.invite_accepted"
   | "auth.password_reset_requested"
   | "auth.password_reset"
+  | "auth.user_created"
   | "auth.user_disabled"
   | "auth.user_enabled"
+  | "auth.password_changed"
   | "auth.role_changed"
+  | "auth.role_created"
+  | "auth.role_updated"
+  | "auth.role_deleted"
   | "auth.permissions_changed"
+  | "auth.overrides_changed"
   | "auth.mfa_enabled"
   | "auth.mfa_disabled"
-  | "auth.sessions_revoked";
+  | "auth.sessions_revoked"
+  | "auth.setup_completed";
 
 export async function recordAuthEvent(params: {
   tenantId: string;

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomInt } from "node:crypto";
 
 import { compare, hash } from "bcryptjs";
 
@@ -44,6 +44,30 @@ export function checkPasswordPolicy(plain: string): PasswordCheck {
     return { ok: false, error: "That password is too common — choose a less predictable one." };
   }
   return { ok: true };
+}
+
+/**
+ * Generate a strong temporary password for an admin-created account. Guaranteed to
+ * satisfy checkPasswordPolicy (length + ≥3 character classes) and drawn from an
+ * unambiguous alphabet (no 0/O/1/l/I) so it is easy to read aloud or type once.
+ * The user is forced to change it on first login, so it never persists.
+ */
+export function generateTempPassword(): string {
+  const lower = "abcdefghjkmnpqrstuvwxyz";
+  const upper = "ABCDEFGHJKMNPQRSTUVWXYZ";
+  const digit = "23456789";
+  const symbol = "!@#$%^&*?";
+  const all = lower + upper + digit + symbol;
+  const pick = (set: string) => set[randomInt(set.length)];
+  // Seed one of each class so the policy always passes, then fill to length 16.
+  const chars = [pick(lower), pick(upper), pick(digit), pick(symbol)];
+  while (chars.length < 16) chars.push(pick(all));
+  // Fisher–Yates shuffle so the seeded classes aren't always in the first 4 slots.
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join("");
 }
 
 /**

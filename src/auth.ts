@@ -12,6 +12,7 @@ import { getSql, withTenant } from "@/db/client";
 import { memberships, users } from "@/db/schema";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { recordAuthEvent } from "@/lib/auth/audit";
+import { resolveRole } from "@/lib/auth/role-resolve";
 import { isSessionStillValid } from "@/lib/auth/session";
 import { decryptSecret } from "@/lib/auth/secrets";
 import { LOCKOUT, LOGIN_LIMITS, rateLimit, resetRateLimit } from "@/lib/auth/rate-limit";
@@ -108,6 +109,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               tokenVersion: users.tokenVersion,
               totpEnabled: users.totpEnabled,
               totpSecret: users.totpSecret,
+              mustChangePassword: users.mustChangePassword,
             })
             .from(users)
             .where(eq(users.id, userId))
@@ -185,10 +187,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           // Membership (org + role) — read through the tenant-scoped `db`.
           const [mem] = await db
-            .select({ organizationId: memberships.organizationId, role: memberships.role })
+            .select({
+              organizationId: memberships.organizationId,
+              role: memberships.role,
+              roleId: memberships.roleId,
+            })
             .from(memberships)
             .where(eq(memberships.userId, userId))
             .limit(1);
+
+          // Resolve the role record (rank + capabilities) so custom roles work too.
+          const resolved = await resolveRole(db, tenantId, mem?.roleId, mem?.role ?? "viewer");
 
           await recordAuthEvent({ tenantId, action: "auth.login", actorId: userId, entityId: userId, metadata: { ip } });
 
@@ -196,10 +205,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             id: userId,
             tenantId,
             organizationId: mem?.organizationId ?? "",
-            role: mem?.role ?? "viewer",
+            role: resolved.key,
+            roleId: resolved.roleId ?? undefined,
+            roleRank: resolved.rank,
+            canWrite: resolved.canWrite,
+            canManageUsers: resolved.canManageUsers,
+            canManageRoles: resolved.canManageRoles,
             email: found.email,
             name: found.name ?? undefined,
             tokenVersion: u.tokenVersion ?? 0,
+            mustChangePassword: u.mustChangePassword ?? false,
           };
         });
       },
@@ -209,11 +224,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       // On sign-in, stamp the tenant claims + the token_version we minted at.
       if (user && "tenantId" in user) {
+        const u = user as {
+          role?: string; roleId?: string; roleRank?: number;
+          canWrite?: boolean; canManageUsers?: boolean; canManageRoles?: boolean;
+          organizationId?: string; tokenVersion?: number; mustChangePassword?: boolean;
+        };
         token.tenantId = user.tenantId as string;
         token.userId = user.id;
-        token.role = (user as { role?: string }).role ?? "viewer";
-        token.organizationId = (user as { organizationId?: string }).organizationId ?? "";
-        token.tokenVersion = (user as { tokenVersion?: number }).tokenVersion ?? 0;
+        token.role = u.role ?? "viewer";
+        token.roleId = u.roleId;
+        token.roleRank = u.roleRank ?? 0;
+        token.canWrite = u.canWrite ?? false;
+        token.canManageUsers = u.canManageUsers ?? false;
+        token.canManageRoles = u.canManageRoles ?? false;
+        token.organizationId = u.organizationId ?? "";
+        token.tokenVersion = u.tokenVersion ?? 0;
+        token.mustChangePassword = u.mustChangePassword ?? false;
         token.checkedAt = Date.now();
         return token;
       }
@@ -224,32 +250,43 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const userId = typeof token.userId === "string" ? token.userId : undefined;
       if (tenantId && userId && Date.now() - last > REVALIDATE_MS) {
         try {
-          const [u] = await withTenant(tenantId, async (db) =>
-            db
+          const result = await withTenant(tenantId, async (db) => {
+            const [u] = await db
               .select({
                 status: users.status,
                 tokenVersion: users.tokenVersion,
+                mustChangePassword: users.mustChangePassword,
                 role: memberships.role,
+                roleId: memberships.roleId,
                 organizationId: memberships.organizationId,
               })
               .from(users)
               .leftJoin(memberships, eq(memberships.userId, users.id))
               .where(eq(users.id, userId))
-              .limit(1),
-          );
+              .limit(1);
+            if (!u) return null;
+            const resolved = await resolveRole(db, tenantId, u.roleId, u.role ?? "viewer");
+            return { u, resolved };
+          });
           if (
-            !u ||
+            !result ||
             !isSessionStillValid({
-              status: u.status,
-              dbTokenVersion: u.tokenVersion,
+              status: result.u.status,
+              dbTokenVersion: result.u.tokenVersion,
               tokenTokenVersion: typeof token.tokenVersion === "number" ? token.tokenVersion : 0,
             })
           ) {
             return null; // invalidate the session (disabled or forced sign-out)
           }
           // Reflect role/org changes made by an admin without forcing re-login.
-          token.role = u.role ?? "viewer";
-          token.organizationId = u.organizationId ?? "";
+          token.role = result.resolved.key;
+          token.roleId = result.resolved.roleId ?? undefined;
+          token.roleRank = result.resolved.rank;
+          token.canWrite = result.resolved.canWrite;
+          token.canManageUsers = result.resolved.canManageUsers;
+          token.canManageRoles = result.resolved.canManageRoles;
+          token.organizationId = result.u.organizationId ?? "";
+          token.mustChangePassword = result.u.mustChangePassword ?? false;
           token.checkedAt = Date.now();
         } catch {
           // On a transient DB error, keep the existing token (fail-open on read).
@@ -264,6 +301,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.tenantId = tenantId;
         session.userId = userId;
         session.role = typeof token.role === "string" ? token.role : "viewer";
+        session.roleId = typeof token.roleId === "string" ? token.roleId : null;
+        session.roleRank = typeof token.roleRank === "number" ? token.roleRank : 0;
+        session.canWrite = token.canWrite === true;
+        session.canManageUsers = token.canManageUsers === true;
+        session.canManageRoles = token.canManageRoles === true;
+        session.mustChangePassword = token.mustChangePassword === true;
         session.organizationId =
           typeof token.organizationId === "string" ? token.organizationId : "";
         session.user = { ...session.user, id: userId, email: session.user?.email ?? "" };

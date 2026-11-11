@@ -4,14 +4,14 @@ import { NextResponse } from "next/server";
 import { withTenant } from "@/db/client";
 import { authTokens } from "@/db/schema";
 import { recordAuthEvent } from "@/lib/auth/audit";
-import { requireSession } from "@/lib/auth/rbac";
+import { requireManageUsers } from "@/lib/auth/rbac";
 
 /** DELETE — revoke a pending invitation. */
 export async function DELETE(
   _req: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const session = await requireSession("org_admin");
+  const session = await requireManageUsers();
   if (session instanceof NextResponse) return session;
   const { id } = await context.params;
 

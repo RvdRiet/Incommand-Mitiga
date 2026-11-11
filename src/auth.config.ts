@@ -21,6 +21,7 @@ export const authConfig = {
         session.tenantId = tenantId;
         session.userId = userId;
         session.role = typeof token.role === "string" ? token.role : "viewer";
+        session.mustChangePassword = token.mustChangePassword === true;
         session.organizationId =
           typeof token.organizationId === "string" ? token.organizationId : "";
         session.user = {

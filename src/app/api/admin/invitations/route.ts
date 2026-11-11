@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { withTenant } from "@/db/client";
 import { authTokens, organizations, tenants, users } from "@/db/schema";
 import { recordAuthEvent } from "@/lib/auth/audit";
-import { ROLES, type Role, canManageUsers, requireSession, roleRank } from "@/lib/auth/rbac";
+import { ROLES, type Role, requireManageUsers, roleRank } from "@/lib/auth/rbac";
 import { sendInviteEmail } from "@/lib/email/mailer";
 import { generateToken, hashToken, TOKEN_TTL } from "@/lib/auth/tokens";
 import { z } from "zod";
@@ -17,7 +17,7 @@ const inviteSchema = z.object({
 
 /** GET — list pending (unconsumed, unexpired) invites for the tenant. */
 export async function GET() {
-  const session = await requireSession("org_admin");
+  const session = await requireManageUsers();
   if (session instanceof NextResponse) return session;
 
   const rows = await withTenant(session.tenantId, async (db) =>
@@ -45,11 +45,8 @@ export async function GET() {
 
 /** POST — create an invite and email a set-password link. */
 export async function POST(req: Request) {
-  const session = await requireSession("org_admin");
+  const session = await requireManageUsers();
   if (session instanceof NextResponse) return session;
-  if (!canManageUsers(session.role)) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
 
   const parsed = inviteSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -58,7 +55,7 @@ export async function POST(req: Request) {
   const { email, role } = parsed.data;
 
   // No privilege escalation: you can only invite at or below your own role.
-  if (roleRank(role) > roleRank(session.role)) {
+  if (roleRank(role) > session.roleRank) {
     return NextResponse.json({ error: "cannot invite a higher role than your own" }, { status: 403 });
   }
 
