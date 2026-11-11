@@ -10,13 +10,15 @@ import { useEffect, useRef, useState } from "react";
  * ⚠️ Feature-flagged and UNTESTED against a live Asterisk (needs a WSS transport + operator
  * endpoint added server-side — see docs/rfc/RFC-006). Inert unless NEXT_PUBLIC_SIP_WSS_URL is set.
  *
- * NOTE: credentials via NEXT_PUBLIC_* are for local testing only — in production the operator's
- * SIP secret must be minted per-session server-side, never shipped in the client bundle.
+ * Credentials are NEVER in the client bundle: the SIP username/password are fetched at
+ * connect time from the authenticated `/api/comms/sip-credentials` endpoint, which derives
+ * the secret server-side. Only the WSS URL + domain (public connection info) stay client-side,
+ * and gate whether the PTT UI is offered at all.
  */
 const WSS_URL = process.env.NEXT_PUBLIC_SIP_WSS_URL;
 const DOMAIN = process.env.NEXT_PUBLIC_SIP_DOMAIN;
-const USER = process.env.NEXT_PUBLIC_SIP_USER;
-const PASSWORD = process.env.NEXT_PUBLIC_SIP_PASSWORD;
+
+type SipCredentials = { wssUrl: string; domain: string; username: string; password: string };
 
 export type SipState = "disabled" | "connecting" | "registered" | "failed";
 
@@ -43,7 +45,9 @@ export type SipPtt = {
   releaseTalk: () => void;
 };
 
-export const SIP_ENABLED = Boolean(WSS_URL && DOMAIN && USER);
+// The UI is gated on the public connection info only; the actual credentials are
+// fetched from the server at connect time.
+export const SIP_ENABLED = Boolean(WSS_URL && DOMAIN);
 
 export function useSipPtt(): SipPtt {
   const [state, setState] = useState<SipState>(SIP_ENABLED ? "connecting" : "disabled");
@@ -60,11 +64,23 @@ export function useSipPtt(): SipPtt {
 
     (async () => {
       try {
+        // Fetch per-session SIP credentials server-side (never in the bundle).
+        const res = await fetch("/api/comms/sip-credentials", { cache: "no-store" });
+        if (!res.ok) {
+          if (!cancelled) setState(res.status === 501 ? "disabled" : "failed");
+          return;
+        }
+        const creds = (await res.json()) as SipCredentials;
+        if (cancelled) return;
+
         const { Web } = await import("sip.js");
-        const simple = new Web.SimpleUser(WSS_URL as string, {
-          aor: `sip:${USER}@${DOMAIN}`,
+        const simple = new Web.SimpleUser(creds.wssUrl, {
+          aor: `sip:${creds.username}@${creds.domain}`,
           media: { remote: { audio } },
-          userAgentOptions: { authorizationUsername: USER, authorizationPassword: PASSWORD },
+          userAgentOptions: {
+            authorizationUsername: creds.username,
+            authorizationPassword: creds.password,
+          },
         });
         su = simple as unknown as SipUser;
         suRef.current = su;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { AccessToken } from "livekit-server-sdk";
 
 import { enforceRateLimit } from "@/lib/auth/api-rate-limit";
-import { MIN_WRITE_ROLE, requireSession } from "@/lib/auth/rbac";
+import { requireWrite } from "@/lib/auth/rbac";
 import { resolveLiveKitUrl } from "@/lib/livekit/url";
 
 /**
@@ -22,7 +22,7 @@ const LIVEKIT_URL = process.env.LIVEKIT_URL;
 export async function GET(req: Request) {
   // Gated at MIN_WRITE_ROLE, same bar as go-live — publishing video is a real action on a
   // shared channel, not a read.
-  const session = await requireSession(MIN_WRITE_ROLE);
+  const session = await requireWrite();
   if (session instanceof NextResponse) return session;
   const limited = await enforceRateLimit(`lkdemopub:${session.userId}`, 30, 60);
   if (limited) return limited;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import mqtt, { type MqttClient } from "mqtt";
 
 import { enforceRateLimit } from "@/lib/auth/api-rate-limit";
-import { MIN_WRITE_ROLE, requireSession } from "@/lib/auth/rbac";
+import { requireWrite } from "@/lib/auth/rbac";
 
 /**
  * Emits the bodycam command-channel messages (RFC-007) so an operator can start/stop a channel's
@@ -52,7 +52,7 @@ function getClient(): Promise<MqttClient> {
 export async function POST(req: Request) {
   // Publishing go-live/stop-live drives real bodycams — require a contributor
   // session so an anonymous caller can't force devices to start/stop streaming.
-  const session = await requireSession(MIN_WRITE_ROLE);
+  const session = await requireWrite();
   if (session instanceof NextResponse) return session;
   const limited = await enforceRateLimit(`golive:${session.userId}`, 30, 60);
   if (limited) return limited;

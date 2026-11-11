@@ -228,6 +228,7 @@ export function DeviceRegistryPage() {
                 type="button"
                 className="dev-registry__remove"
                 title="Remove from registry"
+                aria-label="Remove from registry"
                 onClick={() => removeDevice(d.id)}
               >
                 ×

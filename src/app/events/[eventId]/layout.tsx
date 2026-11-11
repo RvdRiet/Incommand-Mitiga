@@ -5,7 +5,7 @@ import { EventProvider } from "@/context/EventContext";
 import { PermissionsProvider } from "@/context/PermissionsContext";
 import { EventSync } from "@/components/events/EventSync";
 import { ALL_MODULE_SLUGS, ALWAYS_ON } from "@/lib/auth/permissions";
-import { allowedModulesForRole } from "@/lib/auth/permissions-server";
+import { effectiveModulesForUser } from "@/lib/auth/permissions-server";
 
 type LayoutProps = {
   children: React.ReactNode;
@@ -24,9 +24,9 @@ export default async function EventLayout({ children, params }: LayoutProps) {
   let allowed: string[] = OPEN;
   try {
     const session = await auth();
-    if (session?.tenantId && session.role) {
+    if (session?.tenantId && session.roleId && session.userId) {
       allowed = await Promise.race([
-        allowedModulesForRole(session.tenantId, session.role),
+        effectiveModulesForUser(session.tenantId, session.roleId, session.userId),
         new Promise<string[]>((_, reject) => setTimeout(() => reject(new Error("timeout")), 2500)),
       ]);
     }
