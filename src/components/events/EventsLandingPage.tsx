@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -15,6 +16,7 @@ import {
 } from "@/lib/events/store";
 import type { EventRecord, EventStatus } from "@/lib/events/types";
 import { INCIDENT_TEMPLATES, type IncidentTemplate } from "@/lib/events/templates";
+import { isModuleInEdition } from "@/lib/editions";
 import { IconUsers } from "@/components/dashboard/icons";
 import { IconVideo } from "@/components/ui/icons";
 
@@ -29,16 +31,23 @@ const LANDING_MAP_CENTER: [number, number] = [31.17485, -24.43707];
 
 export function EventsLandingPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const tenantId = session?.tenantId;
   const storeHydrated = useEventsStoreHydrated();
   const organizationName = useEventsStore((s) => s.organizationName);
   const events = useEventsStore((s) => s.events);
   const createEvent = useEventsStore((s) => s.createEvent);
   const archiveEvent = useEventsStore((s) => s.archiveEvent);
   const mergeServerEvents = useEventsStore((s) => s.mergeServerEvents);
+  const syncTenantEvents = useEventsStore((s) => s.syncTenantEvents);
+  const setOrganizationName = useEventsStore((s) => s.setOrganizationName);
 
   // Pull the tenant's incidents from the server so events created on another device
   // or browser appear here too (the list is otherwise local to each browser).
-  // Best-effort: on failure (offline / signed out) we keep the local list.
+  // When signed in, scope the list to the tenant (syncTenantEvents) so a fresh tenant
+  // starts clean and never sees the demo seed or another account's events on a shared
+  // browser. Signed out, fall back to an additive merge (expo/offline demo).
+  // Best-effort: on failure (offline) we keep the local list.
   useEffect(() => {
     if (!storeHydrated) return;
     let cancelled = false;
@@ -49,7 +58,20 @@ export function EventsLandingPage() {
         const data = (await res.json()) as {
           incidents: { id: string; name: string; createdAt: string | null }[];
         };
-        if (!cancelled && Array.isArray(data.incidents)) mergeServerEvents(data.incidents);
+        if (cancelled || !Array.isArray(data.incidents)) return;
+        if (tenantId) {
+          // If a DIFFERENT tenant previously owned this browser, purge the per-incident
+          // caches (Dexie + localStorage) before reconciling, so the prior tenant's
+          // incident state is never shown or synced under this one.
+          const prevScope = useEventsStore.getState().tenantScope;
+          if (prevScope && prevScope !== tenantId) {
+            const { clearLocalIncidentCaches } = await import("@/lib/offline/db");
+            await clearLocalIncidentCaches();
+          }
+          syncTenantEvents(tenantId, data.incidents);
+        } else {
+          mergeServerEvents(data.incidents);
+        }
       } catch {
         /* offline / not signed in — keep local events */
       }
@@ -57,7 +79,29 @@ export function EventsLandingPage() {
     return () => {
       cancelled = true;
     };
-  }, [storeHydrated, mergeServerEvents]);
+  }, [storeHydrated, tenantId, syncTenantEvents, mergeServerEvents]);
+
+  // Hydrate the org name from the server so the name captured in the first-run setup
+  // wizard (stored in the DB, tenant-wide) shows in the header on every device — not
+  // just the browser the wizard was completed in. The local store is the fallback.
+  useEffect(() => {
+    if (!storeHydrated) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/setup/status");
+        if (!res.ok) return;
+        const data = (await res.json()) as { orgName?: string; tenantName?: string };
+        const name = (data.orgName || data.tenantName || "").trim();
+        if (!cancelled && name) setOrganizationName(name);
+      } catch {
+        /* offline / not signed in — keep the locally stored org name */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [storeHydrated, setOrganizationName]);
 
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [newEventOpen, setNewEventOpen] = useState(false);
@@ -164,10 +208,12 @@ export function EventsLandingPage() {
               <span className="events-registry-btn__icon" aria-hidden><IconUsers /></span>
               Personnel roster
             </Link>
-            <Link href="/devices" className="events-registry-btn" title="Manage bodycams reusable across incidents">
-              <span className="events-registry-btn__icon" aria-hidden><IconVideo /></span>
-              Device registry
-            </Link>
+            {isModuleInEdition("devices") ? (
+              <Link href="/devices" className="events-registry-btn" title="Manage bodycams reusable across incidents">
+                <span className="events-registry-btn__icon" aria-hidden><IconVideo /></span>
+                Device registry
+              </Link>
+            ) : null}
           </div>
 
           <h2 className="events-section-title">Active events</h2>

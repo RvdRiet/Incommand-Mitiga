@@ -66,9 +66,15 @@ function mapActivationToStatus(level?: string): EventStatus {
   return "none";
 }
 
+type ServerEventRecord = { id: string; name: string; createdAt?: string | null };
+
 type EventsState = {
   organizationName: string;
   events: EventRecord[];
+  /** The tenant this browser's event list belongs to (set once a real user signs in).
+   *  null = anonymous/expo browser (gets the demo seed). Used to keep one tenant from
+   *  ever seeing another tenant's events on a shared browser. */
+  tenantScope: string | null;
 };
 
 type EventsActions = {
@@ -79,11 +85,31 @@ type EventsActions = {
   removeEvent: (id: string) => void;
   setOrganizationName: (name: string) => void;
   /** Merge incidents that exist on the server but not yet in this browser's list,
-   *  so events created on another device/browser show up here. Additive only. */
-  mergeServerEvents: (records: { id: string; name: string; createdAt?: string | null }[]) => void;
+   *  so events created on another device/browser show up here. Additive only.
+   *  Used for the anonymous/expo (signed-out) experience. */
+  mergeServerEvents: (records: ServerEventRecord[]) => void;
+  /** Reconcile the list for a SIGNED-IN tenant. Within the same tenant it merges
+   *  additively (preserving locally-created, not-yet-synced events); when the tenant
+   *  differs from what this browser last held (a different account, or the first real
+   *  sign-in over the demo seed) it REPLACES the list with just this tenant's server
+   *  events — so no tenant ever sees the demo seed or another tenant's events. */
+  syncTenantEvents: (tenantId: string, records: ServerEventRecord[]) => void;
 };
 
 export type EventsStore = EventsState & EventsActions;
+
+/** Map a server incident row to the local EventRecord shape. */
+const serverToEventRecord = (r: ServerEventRecord): EventRecord => ({
+  id: r.id,
+  name: r.name || "Untitled incident",
+  status: "none",
+  startDate: (r.createdAt ?? "").slice(0, 16),
+  endDate: "",
+  archived: false,
+  lat: null,
+  lng: null,
+  createdAt: r.createdAt ?? new Date().toISOString(),
+});
 
 const seedStadiumEvent = (): EventRecord => ({
   id: DEFAULT_SEED_EVENT_ID,
@@ -117,6 +143,7 @@ export const useEventsStore = create<EventsStore>()(
     (set, get) => ({
       organizationName: DEFAULT_ORGANIZATION_NAME,
       events: [seedStadiumEvent()],
+      tenantScope: null,
 
       createEvent: (name, templateId) => {
         const id = newId();
@@ -203,20 +230,30 @@ export const useEventsStore = create<EventsStore>()(
       mergeServerEvents: (records) => {
         set((s) => {
           const known = new Set(s.events.map((e) => e.id));
-          const additions: EventRecord[] = records
+          const additions = records
             .filter((r) => r.id && !known.has(r.id))
-            .map((r) => ({
-              id: r.id,
-              name: r.name || "Untitled incident",
-              status: "none",
-              startDate: (r.createdAt ?? "").slice(0, 16),
-              endDate: "",
-              archived: false,
-              lat: null,
-              lng: null,
-              createdAt: r.createdAt ?? new Date().toISOString(),
-            }));
+            .map(serverToEventRecord);
           return additions.length ? { events: [...additions, ...s.events] } : s;
+        });
+      },
+
+      syncTenantEvents: (tenantId, records) => {
+        set((s) => {
+          if (s.tenantScope === tenantId) {
+            // Same tenant — additive merge so events created offline here, or on
+            // another device, both survive.
+            const known = new Set(s.events.map((e) => e.id));
+            const additions = records
+              .filter((r) => r.id && !known.has(r.id))
+              .map(serverToEventRecord);
+            return additions.length ? { events: [...additions, ...s.events] } : s;
+          }
+          // A different tenant (or the first real sign-in over the demo seed) now owns
+          // this browser: start from THIS tenant's server events only.
+          return {
+            tenantScope: tenantId,
+            events: records.filter((r) => r.id).map(serverToEventRecord),
+          };
         });
       },
     }),
@@ -224,16 +261,18 @@ export const useEventsStore = create<EventsStore>()(
       name: "mitiga-events-v1",
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+        // Once a real tenant owns this browser (tenantScope set), never seed demo or
+        // legacy content — the signed-in events come from the server via
+        // syncTenantEvents. The demo seed below is only for the anonymous/expo browser.
+        if (state.tenantScope) return;
         // Legacy single-incident migration only applies to a first-run empty list.
         if (state.events.length === 0) {
           const migrated = migrateLegacyIncident();
           if (migrated) state.events = [migrated.event];
         }
-        // Always ensure the populated demo incident is present, in EVERY browser
-        // and the desktop app — card + full local state — so it's there for
-        // expo/offline demos without login or a server round-trip. Idempotent:
-        // added only if missing (a signed-in client's server copy syncs the same
-        // id, and the local state seed never overwrites an existing copy).
+        // For the anonymous/expo experience only: ensure the populated demo incident
+        // is present (card + full local state) so it's there for offline demos without
+        // login or a server round-trip. Idempotent: added only if missing.
         ensureDemoIncidentState();
         if (!state.events.some((e) => e.id === DEMO_EVENT_ID)) {
           state.events = [DEMO_EVENT, ...state.events];

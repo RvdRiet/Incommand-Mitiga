@@ -72,6 +72,29 @@ export function readLocalState(incidentId: string) {
   return offlineDb().incidents.get(incidentId);
 }
 
+/**
+ * Wipe every locally-cached incident — the Dexie outbox AND the per-incident
+ * `mitiga-incident-*` localStorage copies. Called when a DIFFERENT tenant signs in on
+ * this browser, so one tenant's incident state is never shown to, or synced under,
+ * another tenant (the incident-level counterpart to the events-list tenant scoping).
+ */
+export async function clearLocalIncidentCaches(): Promise<void> {
+  try {
+    await offlineDb().incidents.clear();
+  } catch {
+    /* IndexedDB unavailable / blocked — nothing to clear */
+  }
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith("mitiga-incident-") || k.startsWith("mitiga-demo-")) {
+        localStorage.removeItem(k);
+      }
+    }
+  } catch {
+    /* private mode / storage disabled — ignore */
+  }
+}
+
 /** Every incident with unsynced local edits — the outbox. */
 export function pendingIncidents() {
   return offlineDb().incidents.where("dirty").equals(1).toArray();

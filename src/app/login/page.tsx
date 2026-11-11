@@ -20,7 +20,9 @@ const DEV = process.env.NEXT_PUBLIC_STAGING === "1";
 
 export default function LoginPage() {
   const router = useRouter();
-  const callbackUrl = "/dashboard";
+  // Land on the events home directly. /dashboard is only a legacy redirect to "/",
+  // and routing through it shows a blank frame mid-redirect (a poor first sign-in).
+  const callbackUrl = "/";
 
   const [tenant, setTenant] = useState<Tenant | null>(
     DEV ? { id: "demo", name: "Demo City", slug: "demo" } : null,
