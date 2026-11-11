@@ -50,7 +50,7 @@ export function StatusFilterBar({
 }) {
   if (!active) return null;
   return (
-    <div className="ic-filter-panel">
+    <div className="ic-filter-panel" data-activity-ignore>
       <label className="ic-filter-panel__label">
         <span>{label}</span>
         <select

@@ -1,12 +1,59 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
+
+/**
+ * localStorage, but a failed write (quota exceeded, or Safari private mode) is
+ * swallowed instead of thrown. Without this, one oversized write — e.g. a large
+ * embedded image — makes zustand's persist throw on EVERY subsequent save, which
+ * cascades: nothing persists and the console fills with errors. The incident state
+ * also syncs to the server (the real source of truth), so dropping a local cache
+ * write is safe; the DB keeps the data and rehydrates it on reload.
+ */
+const noopStorage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+};
+const quotaSafeStorage = createJSONStorage(() => {
+  if (typeof window === "undefined") return noopStorage;
+  let warned = false;
+  return {
+    getItem: (key: string) => {
+      try {
+        return window.localStorage.getItem(key);
+      } catch {
+        return null; // private mode / blocked storage — hydrate from the server instead
+      }
+    },
+    setItem: (key: string, value: string) => {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch (e) {
+        if (!warned) {
+          warned = true;
+          console.warn(
+            `[incident] local cache write skipped (${(e as Error)?.name ?? "error"}); state still syncs to the server.`,
+          );
+        }
+      }
+    },
+    removeItem: (key: string) => {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {
+        /* ignore */
+      }
+    },
+  };
+});
 
 import { nextAnnotationColor } from "@/lib/maps/map-annotations";
 import {
   buildFieldOrder,
   buildFormRecord,
+  buildInitialFormContent,
   getIcsFormTemplate,
   parseFormContent,
   serializeFormFields,
@@ -69,6 +116,21 @@ function audit(actor: string, action: string): AuditEntry {
   return { id: newId(), actor, action, createdAt: nowIso() };
 }
 
+/**
+ * Upgrade a legacy ICS form so it renders the structured FEMA layout (and picks
+ * up linked auto-population). Only EMPTY-content forms with a known templateId
+ * are upgraded to the structured scaffold — forms holding real free text are left
+ * exactly as they are, so no notes are ever reinterpreted or lost.
+ */
+const upgradeLegacyFormContent = (
+  templateId: string | null,
+  content: string,
+): string => {
+  if (!templateId || content.trim()) return content;
+  const template = getIcsFormTemplate(templateId);
+  return template ? buildInitialFormContent(template) : content;
+};
+
 const incidentPersistMerge = (
   persisted: unknown,
   current: IncidentState,
@@ -119,10 +181,12 @@ const incidentPersistMerge = (
           templateId: f.templateId ?? null,
           formNumber: f.formNumber ?? "",
           officialTitle: f.officialTitle ?? f.name ?? "",
-          content: f.content ?? "",
+          content: upgradeLegacyFormContent(f.templateId ?? null, f.content ?? ""),
           status: f.status ?? "draft",
           pdfUrl: f.pdfUrl ?? null,
           inIap: f.inIap ?? false,
+          createdAt: f.createdAt ?? f.modifiedAt ?? nowIso(),
+          createdBy: f.createdBy ?? null,
           savedAt: f.savedAt ?? null,
           filledBy: f.filledBy ?? null,
         }))
@@ -159,7 +223,7 @@ type IncidentActions = {
   updateSituation: (patch: Partial<Situation>) => void;
   setActivationLevel: (level: ActivationLevel) => void;
 
-  addPersonnel: (partial?: { name?: string; role?: string }) => string;
+  addPersonnel: (partial?: { name?: string; role?: string; orgPersonId?: string }) => string;
   updatePersonnel: (id: string, patch: Partial<Personnel>) => void;
   removePersonnel: (id: string) => void;
 
@@ -168,6 +232,13 @@ type IncidentActions = {
   removeRole: (groupId: string, roleId: string) => void;
   assignPersonnelToRole: (groupId: string, roleId: string, personnelId: string | null) => void;
 
+  /**
+   * Display name of the signed-in account, used as the author for every logged
+   * action. Set from the session; "System" before a user is known. Not synced to
+   * the DB (it's per-session), so it lives on the store, not IncidentState.
+   */
+  currentActor: string;
+  setCurrentActor: (name: string) => void;
   addLog: (message: string, tags?: string[], author?: string) => void;
   recordActivity: (record: {
     message: string;
@@ -178,7 +249,7 @@ type IncidentActions = {
     detail?: string;
   }) => void;
 
-  addForm: (templateId: string) => string | null;
+  addForm: (templateId: string, actor?: { name: string; email?: string | null }) => string | null;
   /** Re-synthesise an auto-populated form (ICS-209) from live incident data. */
   autoPopulateForm: (id: string) => boolean;
   updateForm: (id: string, patch: Partial<IcsFormRecord>) => void;
@@ -360,7 +431,7 @@ export function createIncidentStore(eventId: string) {
       updateSituation: (patch) => {
         set((s) => ({
           situation: { ...s.situation, ...patch },
-          audit: [...s.audit, audit("System", `Situation updated: ${Object.keys(patch).join(", ")}`)],
+          audit: [...s.audit, audit(get().currentActor, `Situation updated: ${Object.keys(patch).join(", ")}`)],
         }));
       },
 
@@ -380,10 +451,19 @@ export function createIncidentStore(eventId: string) {
         const id = newId();
         const name = partial?.name?.trim() || "New Personnel";
         set((s) => ({
-          personnel: [...s.personnel, { id, name, role: partial?.role?.trim() || "", online: false }],
+          personnel: [
+            ...s.personnel,
+            {
+              id,
+              name,
+              role: partial?.role?.trim() || "",
+              online: false,
+              orgPersonId: partial?.orgPersonId,
+            },
+          ],
           audit: [
             ...s.audit,
-            audit("System", partial?.name ? `Personnel added: ${name}` : "Personnel added"),
+            audit(get().currentActor, partial?.name ? `Personnel added: ${name}` : "Personnel added"),
           ],
         }));
         return id;
@@ -447,13 +527,19 @@ export function createIncidentStore(eventId: string) {
         get().updateRole(groupId, roleId, { personnelId });
       },
 
-      addLog: (message, tags = [], author = "Operator") => {
+      currentActor: "System",
+      setCurrentActor: (name) => {
+        const trimmed = name.trim();
+        if (trimmed && trimmed !== get().currentActor) set({ currentActor: trimmed });
+      },
+
+      addLog: (message, tags = [], author) => {
         if (!message.trim()) return;
         runWithoutStoreActivityLog(() => {
           get().recordActivity({
             message: message.trim(),
             tags: ["user", ...tags],
-            author,
+            author: author ?? get().currentActor,
             kind: "user",
           });
         });
@@ -462,11 +548,12 @@ export function createIncidentStore(eventId: string) {
       recordActivity: (record) => {
         if (!record.message.trim()) return;
         runWithoutStoreActivityLog(() => {
-          appendActivityLog(set, record);
+          // Attribute to the signed-in account unless the caller named someone.
+          appendActivityLog(set, { ...record, author: record.author ?? get().currentActor });
         });
       },
 
-      addForm: (templateId) => {
+      addForm: (templateId, actor) => {
         const situation = get().situation;
         const record = buildFormRecord(templateId, {
           incidentName: situation.name,
@@ -476,6 +563,8 @@ export function createIncidentStore(eventId: string) {
           currentSituation: situation.summary,
         });
         if (!record) return null;
+        // Register who created the form (the initiating account).
+        if (actor?.name) record.createdBy = actor.name;
         // ICS-209 is a live status roll-up — seed its narrative from incident data so a
         // new one opens already filled instead of blank.
         if (templateId === "ICS-209") {
@@ -488,7 +577,10 @@ export function createIncidentStore(eventId: string) {
         }
         set((s) => ({
           forms: [...s.forms, record],
-          audit: [...s.audit, audit("System", `Form created: ${record.name}`)],
+          audit: [
+            ...s.audit,
+            audit(actor?.name ?? "System", `Form created: ${record.name}`),
+          ],
         }));
         return record.id;
       },
@@ -512,7 +604,7 @@ export function createIncidentStore(eventId: string) {
           ),
           audit: [
             ...s.audit,
-            audit("System", `ICS-209 auto-populated from incident data`),
+            audit(get().currentActor, `ICS-209 auto-populated from incident data`),
           ],
         }));
         return true;
@@ -578,7 +670,7 @@ export function createIncidentStore(eventId: string) {
             ...s.customForms,
             { id, name, kind, status: "draft", fields: [], responses: [], createdAt: now, modifiedAt: now },
           ],
-          audit: [...s.audit, audit("System", `${name} created`)],
+          audit: [...s.audit, audit(get().currentActor, `${name} created`)],
         }));
         return id;
       },
@@ -965,7 +1057,7 @@ export function createIncidentStore(eventId: string) {
             },
             ...s.shifts,
           ],
-          audit: [...s.audit, audit("System", "Shift added to roster")],
+          audit: [...s.audit, audit(get().currentActor, "Shift added to roster")],
         }));
         return id;
       },
@@ -997,7 +1089,7 @@ export function createIncidentStore(eventId: string) {
             },
             ...s.certifications,
           ],
-          audit: [...s.audit, audit("System", "Certification added")],
+          audit: [...s.audit, audit(get().currentActor, "Certification added")],
         }));
         return id;
       },
@@ -1033,7 +1125,7 @@ export function createIncidentStore(eventId: string) {
             },
             ...s.inventory,
           ],
-          audit: [...s.audit, audit("System", "Inventory item added")],
+          audit: [...s.audit, audit(get().currentActor, "Inventory item added")],
         }));
         return id;
       },
@@ -1206,7 +1298,7 @@ export function createIncidentStore(eventId: string) {
         };
         set((s) => ({
           calendarEvents: [...s.calendarEvents, event],
-          audit: [...s.audit, audit("System", `Calendar event added: ${event.title}`)],
+          audit: [...s.audit, audit(get().currentActor, `Calendar event added: ${event.title}`)],
         }));
         return id;
       },
@@ -1250,7 +1342,7 @@ export function createIncidentStore(eventId: string) {
         set((s) => ({
           operationalPeriods: [...s.operationalPeriods, op],
           calendarEvents: [...s.calendarEvents, calEvent],
-          audit: [...s.audit, audit("System", `Operational period ${num} opened`)],
+          audit: [...s.audit, audit(get().currentActor, `Operational period ${num} opened`)],
         }));
         return id;
       },
@@ -1395,7 +1487,7 @@ export function createIncidentStore(eventId: string) {
           notifications: [record, ...s.notifications],
           audit: [
             ...s.audit,
-            audit("System", `Notification queued: ${draft.subject}`),
+            audit(get().currentActor, `Notification queued: ${draft.subject}`),
           ],
         }));
         setTimeout(() => get().markNotificationSent(record.id), 800);
@@ -1447,7 +1539,7 @@ export function createIncidentStore(eventId: string) {
             },
             ...s.logs,
           ],
-          audit: [...s.audit, audit("System", `Play applied: ${play.name}`)],
+          audit: [...s.audit, audit(get().currentActor, `Play applied: ${play.name}`)],
         }));
         return true;
       },
@@ -1738,6 +1830,7 @@ export function createIncidentStore(eventId: string) {
     }),
       {
         name: `mitiga-incident-${eventId}`,
+        storage: quotaSafeStorage,
         merge: (persisted, current) => ({
           ...(current as IncidentStore),
           ...incidentPersistMerge(persisted, current as IncidentState),

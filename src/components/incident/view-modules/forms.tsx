@@ -47,8 +47,16 @@ export function FormsView() {
     setSaveNotice(null);
   }, [selectedId]);
 
+  /** The signed-in account (falls back to the typed/stored name) — recorded as creator/editor. */
+  const currentActor = () =>
+    resolveFormActor({
+      sessionName: session?.user?.name,
+      sessionEmail: session?.user?.email,
+      storedName: actorName,
+    });
+
   const handleAddForm = (templateId: string) => {
-    const id = addForm(templateId);
+    const id = addForm(templateId, currentActor());
     if (id) setSelectedId(id);
   };
 
@@ -92,11 +100,7 @@ export function FormsView() {
 
   const handleSaveForm = async () => {
     if (!selected) return;
-    const actor = resolveFormActor({
-      sessionName: session?.user?.name,
-      sessionEmail: session?.user?.email,
-      storedName: actorName,
-    });
+    const actor = currentActor();
     setStoredFormActorName(actor.name);
     setPdfExporting(true);
     setSaveNotice("Saving form and generating PDF…");
@@ -224,7 +228,7 @@ export function FormsView() {
               <button
                 type="button"
                 className="ic-btn-secondary ic-btn-secondary--sm"
-                onClick={() => missingRequired.forEach((r) => addForm(r.templateId))}
+                onClick={() => missingRequired.forEach((r) => addForm(r.templateId, currentActor()))}
               >
                 Create all missing
               </button>
@@ -263,10 +267,7 @@ export function FormsView() {
             <thead>
               <tr>
                 <th>Form</th>
-                <th>IAP</th>
                 <th>Status</th>
-                <th>Saved</th>
-                <th>Filled by</th>
                 <th />
               </tr>
             </thead>
@@ -278,15 +279,27 @@ export function FormsView() {
                   onClick={() => setSelectedId(f.id)}
                 >
                   <td>
-                    <span className="ic-form-name">{f.name}</span>
-                    {f.formNumber ? (
-                      <span className="ic-form-number">ICS {f.formNumber}</span>
-                    ) : null}
+                    <span className="ic-form-name">
+                      {f.name}
+                      {f.formNumber ? <span className="ic-form-number">ICS {f.formNumber}</span> : null}
+                      {f.inIap ? <span className="ic-form-iap-tag">IAP</span> : null}
+                    </span>
+                    <span className="ic-form-meta">
+                      {f.createdBy ? <>Created by {f.createdBy}</> : null}
+                      {f.savedAt ? (
+                        <>
+                          {f.createdBy ? " · " : ""}edited {formatDate(f.savedAt)}
+                          {f.filledBy ? ` by ${f.filledBy}` : ""}
+                        </>
+                      ) : null}
+                      {!f.createdBy && !f.savedAt ? "Not yet saved" : null}
+                    </span>
                   </td>
-                  <td>{f.inIap ? "Yes" : "—"}</td>
-                  <td>{f.status ?? "draft"}</td>
-                  <td>{f.savedAt ? formatDate(f.savedAt) : "—"}</td>
-                  <td>{f.filledBy ?? "—"}</td>
+                  <td>
+                    <span className={`ic-form-status ic-form-status--${f.status ?? "draft"}`}>
+                      {f.status ?? "draft"}
+                    </span>
+                  </td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <RowDelete
                       onClick={() => {
@@ -379,12 +392,17 @@ export function FormsView() {
                   </select>
                 </label>
               </div>
-              {selected.savedAt || selected.filledBy || contentMeta ? (
+              {selected.createdBy || selected.savedAt || selected.filledBy || contentMeta ? (
                 <p className="ic-form-editor__save-meta">
-                  {selected.savedAt ? (
-                    <span>Last saved {formatDate(selected.savedAt)}</span>
+                  {selected.createdBy ? (
+                    <span>Created by {selected.createdBy}</span>
                   ) : null}
-                  {selected.filledBy ? <span> · {selected.filledBy}</span> : null}
+                  {selected.savedAt ? (
+                    <span>
+                      {selected.createdBy ? " · " : ""}Last saved {formatDate(selected.savedAt)}
+                    </span>
+                  ) : null}
+                  {selected.filledBy ? <span> by {selected.filledBy}</span> : null}
                   {contentMeta?.savedByEmail ? (
                     <span> ({contentMeta.savedByEmail})</span>
                   ) : null}

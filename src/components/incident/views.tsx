@@ -24,6 +24,7 @@ import { windCompass, type WeatherForecast, type WeatherRisk } from "@/lib/weath
 import { CensusCityField } from "./CensusCityField";
 import { useSituationReport } from "./useSituationReport";
 import { useOrgRoster } from "@/lib/roster/store";
+import { PersonEventDetail } from "@/components/roster/PersonEventDetail";
 import { useIncidentStore } from "@/context/EventContext";
 import type {
   ActivationLevel,
@@ -88,7 +89,7 @@ function SearchBar({
 }) {
   if (!active) return null;
   return (
-    <div className="ic-search-panel">
+    <div className="ic-search-panel" data-activity-ignore>
       <input
         type="search"
         className="ic-search-panel__input"
@@ -509,7 +510,13 @@ export function RolesView({ searchActive, orgChartOpen }: ViewProps) {
   );
 }
 
-type ActivityFilter = "all" | "ui" | "data" | "navigation" | "user" | "audit";
+type ActivityFilter = "all" | "data" | "user" | "audit";
+
+// Clicks, field focus and page views are deliberately not logged any more; hide any
+// legacy ones so the log reads as a real "who did what, when" record. Legacy entries
+// were mirrored into the audit stream too, so match those actions by prefix.
+const HIDDEN_LOG_KINDS = new Set(["ui", "navigation"]);
+const LEGACY_NOISE_ACTION = /^(Click|Field (focused|changed|updated)|Page viewed)\b/;
 
 type TimelineRow =
   | { id: string; sortAt: string; source: "log"; entry: LogEntry }
@@ -543,18 +550,30 @@ export function LogsView() {
     return rows;
   }, [logs, audit]);
 
+  // Base timeline with the UI noise (clicks / focus / navigation) filtered out of
+  // both the activity log (by kind) and the mirrored audit stream (by action text).
+  const base = useMemo(
+    () =>
+      timeline.filter((r) =>
+        r.source === "audit"
+          ? !LEGACY_NOISE_ACTION.test(r.entry.action)
+          : !HIDDEN_LOG_KINDS.has(r.entry.kind ?? "system"),
+      ),
+    [timeline],
+  );
+
   const filtered = useMemo(() => {
-    if (filter === "all") return timeline;
-    if (filter === "audit") return timeline.filter((r) => r.source === "audit");
+    if (filter === "all") return base;
+    if (filter === "audit") return base.filter((r) => r.source === "audit");
     if (filter === "user") {
-      return timeline.filter(
+      return base.filter(
         (r) => r.source === "log" && (r.entry.kind === "user" || r.entry.tags.includes("user")),
       );
     }
-    return timeline.filter(
+    return base.filter(
       (r) => r.source === "log" && (r.entry.kind === filter || r.entry.tags.includes(filter)),
     );
-  }, [timeline, filter]);
+  }, [base, filter]);
 
   const submit = () => {
     if (!message.trim()) return;
@@ -574,17 +593,15 @@ export function LogsView() {
   return (
     <section className="ic-logs">
       <header className="ic-logs__header ic-logs__header--compact">
-        <span className="ic-logs__count">{timeline.length} events</span>
+        <span className="ic-logs__count">{base.length} events</span>
       </header>
 
       <nav className="ic-logs__filters" aria-label="Filter activity">
         {(
           [
             ["all", "All"],
-            ["ui", "UI"],
-            ["data", "Data"],
-            ["navigation", "Navigation"],
-            ["user", "Manual"],
+            ["data", "Changes"],
+            ["user", "Notes"],
             ["audit", "Audit"],
           ] as const
         ).map(([id, label]) => (
@@ -648,7 +665,7 @@ export function LogsView() {
         </ul>
       )}
 
-      <footer className="ic-log-composer">
+      <footer className="ic-log-composer" data-activity-ignore>
         {tags.length > 0 ? (
           <div className="ic-log-composer__tags">
             {tags.map((t) => (
@@ -1492,16 +1509,23 @@ export function PersonnelView({ searchActive }: ViewProps) {
   const readinessOf = (id: string) =>
     personReadiness(id, readinessData, rules, settings.certReminderDays ?? 30, now);
   const [dropOver, setDropOver] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { query, setQuery, filtered } = useSearchFilter(personnel, (p, q) =>
     p.name.toLowerCase().includes(q),
   );
 
-  const onRoster = (name: string) =>
-    personnel.some((p) => p.name.trim().toLowerCase() === name.trim().toLowerCase());
+  // A roster person is "already on the event" if a record links to their org id (preferred),
+  // or, for people added before linking existed, if their name matches.
+  const onRoster = (person: { id?: string; name: string }) =>
+    personnel.some(
+      (p) =>
+        (person.id && p.orgPersonId === person.id) ||
+        p.name.trim().toLowerCase() === person.name.trim().toLowerCase(),
+    );
 
-  const addFromRoster = (person: { name: string; role: string }) => {
-    if (!person.name.trim() || onRoster(person.name)) return;
-    addPersonnel({ name: person.name, role: person.role });
+  const addFromRoster = (person: { id?: string; name: string; role: string }) => {
+    if (!person.name.trim() || onRoster(person)) return;
+    addPersonnel({ name: person.name, role: person.role, orgPersonId: person.id });
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -1527,7 +1551,7 @@ export function PersonnelView({ searchActive }: ViewProps) {
           </p>
           <ul className="ic-roster-chips">
             {roster.map((person) => {
-              const added = onRoster(person.name);
+              const added = onRoster(person);
               return (
                 <li
                   key={person.id}
@@ -1536,7 +1560,7 @@ export function PersonnelView({ searchActive }: ViewProps) {
                   onDragStart={(e) =>
                     e.dataTransfer.setData(
                       "application/json",
-                      JSON.stringify({ name: person.name, role: person.role }),
+                      JSON.stringify({ id: person.id, name: person.name, role: person.role }),
                     )
                   }
                 >
@@ -1594,12 +1618,26 @@ export function PersonnelView({ searchActive }: ViewProps) {
           </thead>
           <tbody>
             {filtered.map((p) => (
-              <tr key={p.id}>
+              <Fragment key={p.id}>
+              <tr>
                 <td>
-                  <InlineInput
-                    value={p.name}
-                    onChange={(v) => update(p.id, { name: v })}
-                  />
+                  <div className="ic-person-name-cell">
+                    {p.orgPersonId ? (
+                      <button
+                        type="button"
+                        className={`ic-person-expand${expandedId === p.id ? " ic-person-expand--open" : ""}`}
+                        aria-expanded={expandedId === p.id}
+                        title="View qualifications & recent shifts"
+                        onClick={() => setExpandedId((id) => (id === p.id ? null : p.id))}
+                      >
+                        ▸
+                      </button>
+                    ) : null}
+                    <InlineInput
+                      value={p.name}
+                      onChange={(v) => update(p.id, { name: v })}
+                    />
+                  </div>
                 </td>
                 <td>
                   <InlineInput
@@ -1644,6 +1682,14 @@ export function PersonnelView({ searchActive }: ViewProps) {
                   <RowDelete onClick={() => remove(p.id)} />
                 </td>
               </tr>
+              {p.orgPersonId && expandedId === p.id ? (
+                <tr className="ic-person-detail-row">
+                  <td colSpan={6}>
+                    <PersonEventDetail orgPersonId={p.orgPersonId} />
+                  </td>
+                </tr>
+              ) : null}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -1697,6 +1743,7 @@ export function WeatherView() {
   const eventId = useEventId();
   const lat = useIncidentStore((s) => s.situation.lat);
   const lng = useIncidentStore((s) => s.situation.lng);
+  const locationName = useIncidentStore((s) => s.situation.location);
   const [forecast, setForecast] = useState<WeatherForecast | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1735,11 +1782,15 @@ export function WeatherView() {
   if (lat == null || lng == null) {
     return (
       <EmptyHint>
-        Please{" "}
-        <Link href={moduleHref(eventId, "situation")} className="ic-accent-link">
-          set the location in Situation
+        The forecast follows the incident location. Drop the pin on the{" "}
+        <Link href={moduleHref(eventId, "map")} className="ic-accent-link">
+          Map
         </Link>{" "}
-        (latitude and longitude) first.
+        (Location tool), or set it in{" "}
+        <Link href={moduleHref(eventId, "situation")} className="ic-accent-link">
+          Situation
+        </Link>
+        , and the weather updates automatically.
       </EmptyHint>
     );
   }
@@ -1754,7 +1805,9 @@ export function WeatherView() {
         <div>
           <h2 className="ic-page-heading">Weather</h2>
           <p className="ic-wx-sub">
-            Forecast for {lat.toFixed(4)}, {lng.toFixed(4)}
+            Forecast for the incident location
+            {locationName ? <> · <strong>{locationName}</strong></> : null} ·{" "}
+            {lat.toFixed(4)}, {lng.toFixed(4)}
             {forecast ? (
               <>
                 {" · "}

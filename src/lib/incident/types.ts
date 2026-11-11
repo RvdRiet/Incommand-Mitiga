@@ -62,6 +62,12 @@ export type Personnel = {
   name: string;
   role: string;
   online: boolean;
+  /**
+   * Live link to the org roster person (`org_personnel.id`) this record was added from.
+   * When set, the in-event person view resolves photo, qualifications and recent shifts
+   * live from the org stores, so hub edits show through. Absent for manually-added people.
+   */
+  orgPersonId?: string;
 } & GeoLocated;
 
 export type RoleRow = {
@@ -104,9 +110,13 @@ export type IcsFormRecord = {
   officialTitle: string;
   formType: string;
   modifiedAt: string;
+  /** When the form was first created. */
+  createdAt: string;
+  /** Display name of the person whose account created the form. */
+  createdBy: string | null;
   /** Last explicit save (ICS structured payload + metadata). */
   savedAt: string | null;
-  /** Display name of the person who last saved the form. */
+  /** Display name of the person who last saved/edited the form. */
   filledBy: string | null;
   folderId: string | null;
   content: string;

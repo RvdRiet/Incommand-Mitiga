@@ -9,6 +9,7 @@ import { useEventId, useIncidentStore, useIncidentStoreHydrated } from "@/contex
 import { usePermissions } from "@/context/PermissionsContext";
 import { getModuleBySlug } from "@/lib/navigation/modules";
 import { ALL_MODULE_SLUGS } from "@/lib/auth/permissions";
+import { isModuleInEdition } from "@/lib/editions";
 
 const RESTRICTABLE = new Set(ALL_MODULE_SLUGS);
 
@@ -130,7 +131,8 @@ export function IncidentLayout({ moduleSlug }: { moduleSlug: string }) {
         }
       />
       <DemoBanner />
-      <DistressBanner />
+      {/* Distress is part of Live Ops comms — hide its banner when that module is out of edition. */}
+      {isModuleInEdition("comms") && <DistressBanner />}
       <ModuleToolbar
         eventId={eventId}
         moduleSlug={moduleSlug}

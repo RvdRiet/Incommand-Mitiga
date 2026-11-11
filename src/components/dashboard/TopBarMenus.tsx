@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { SignOutButton } from "@/components/SignOutButton";
 import { canManageUsers } from "@/lib/auth/roles";
+import { isModuleInEdition } from "@/lib/editions";
 import { moduleHref } from "@/lib/navigation/modules";
 
 import { IconBell, IconHelp, IconUser } from "./icons";
@@ -56,6 +57,8 @@ export function TopBarHelpButton() {
 }
 
 export function TopBarNotificationsButton({ eventId }: MenuProps) {
+  // Hidden entirely when Notifications isn't part of the active edition.
+  if (!isModuleInEdition("notifications")) return null;
   if (!eventId) {
     return (
       <button type="button" className="ic-topbar__icon" aria-label="Notifications" disabled>

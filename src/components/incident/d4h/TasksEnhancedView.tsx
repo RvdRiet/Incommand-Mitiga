@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { useIncidentStore } from "@/context/EventContext";
 import type { TaskItemStatus } from "@/lib/incident/types";
@@ -32,6 +32,14 @@ export function TasksEnhancedView({ searchActive }: ViewProps) {
   const addTaskChecklistItem = useIncidentStore((s) => s.addTaskChecklistItem);
   const toggleTaskChecklistItem = useIncidentStore((s) => s.toggleTaskChecklistItem);
   const removeTaskChecklistItem = useIncidentStore((s) => s.removeTaskChecklistItem);
+  const personnel = useIncidentStore((s) => s.personnel);
+
+  // Suggest the incident's personnel as assignees (free text still allowed, so you
+  // can type an account name that will match a person's "My tasks" on the dashboard).
+  const assigneeOptions = useMemo(
+    () => [...new Set(personnel.map((p) => p.name.trim()).filter(Boolean))].sort(),
+    [personnel],
+  );
 
   const [view, setView] = useState<"list" | "board">("board");
   const { query, setQuery, filtered } = useSearchFilter(taskLists, (l, q) =>
@@ -104,6 +112,7 @@ export function TasksEnhancedView({ searchActive }: ViewProps) {
                           key={item.id}
                           listId={list.id}
                           item={item}
+                          assigneeOptions={assigneeOptions}
                           onUpdate={(patch) => updateTaskItem(list.id, item.id, patch)}
                           onAddCheck={() => addTaskChecklistItem(list.id, item.id)}
                           onToggleCheck={(cid) =>
@@ -146,6 +155,7 @@ export function TasksEnhancedView({ searchActive }: ViewProps) {
                           listId={list.id}
                           item={item}
                           compact
+                          assigneeOptions={assigneeOptions}
                           onUpdate={(patch) => updateTaskItem(list.id, item.id, patch)}
                           onAddCheck={() => addTaskChecklistItem(list.id, item.id)}
                           onToggleCheck={(cid) =>
@@ -198,6 +208,7 @@ function TaskCard({
   listId,
   item,
   compact,
+  assigneeOptions,
   onUpdate,
   onAddCheck,
   onToggleCheck,
@@ -206,6 +217,7 @@ function TaskCard({
   listId: string;
   item: import("@/lib/incident/types").TaskItem;
   compact?: boolean;
+  assigneeOptions: string[];
   onUpdate: (patch: Partial<import("@/lib/incident/types").TaskItem>) => void;
   onAddCheck: () => void;
   onToggleCheck: (id: string) => void;
@@ -213,6 +225,7 @@ function TaskCard({
 }) {
   const checks = item.checklist ?? [];
   const done = checks.filter((c) => c.done).length;
+  const listId8 = `assignees-${listId.slice(0, 8)}`;
 
   return (
     <div className={`ic-task-card${compact ? " ic-task-card--compact" : ""}`}>
@@ -224,6 +237,23 @@ function TaskCard({
           options={TASK_STATUS_OPTS}
         />
       ) : null}
+      <label className="ic-task-card__assignee">
+        <span className="ic-task-card__assignee-icon" aria-hidden>
+          @
+        </span>
+        <input
+          list={listId8}
+          value={item.assignee ?? ""}
+          onChange={(e) => onUpdate({ assignee: e.target.value || undefined })}
+          placeholder="Assign to…"
+          aria-label="Assign task to"
+        />
+        <datalist id={listId8}>
+          {assigneeOptions.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
+      </label>
       <div className="ic-task-card__checklist">
         <div className="ic-task-card__checklist-head">
           <span>
@@ -259,6 +289,7 @@ function TaskCard({
                 type="button"
                 className="ic-task-check-remove"
                 onClick={() => onRemoveCheck(c.id)}
+                aria-label="Remove checklist item"
               >
                 ×
               </button>

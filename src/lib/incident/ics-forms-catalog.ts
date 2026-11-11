@@ -856,6 +856,8 @@ export function buildFormRecord(
     officialTitle: template.title,
     formType: "ICS",
     modifiedAt: nowIso(),
+    createdAt: nowIso(),
+    createdBy: null,
     savedAt: null,
     filledBy: null,
     folderId: null,

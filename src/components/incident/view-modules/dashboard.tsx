@@ -29,9 +29,11 @@ import {
   inventorySummary,
 } from "@/lib/incident/inventory";
 import { annotationsToFeatureCollection, DEFAULT_ANNOTATION_COLOR } from "@/lib/maps/map-annotations";
-import { buildCopFeatures, COP_LAYERS } from "@/lib/maps/cop-features";
+import { buildCopFeatures, editionCopLayers } from "@/lib/maps/cop-features";
 import { mergeFeatureCollections } from "@/lib/maps/geo-utils";
+import { isModuleInEdition } from "@/lib/editions";
 import { moduleHref } from "@/lib/navigation/modules";
+import { MyTasksCard } from "./MyTasksCard";
 
 const MapCanvasLazy = dynamic(() => import("@/components/map/MapCanvas"), {
   ssr: false,
@@ -134,7 +136,7 @@ export function DashboardHomeView() {
         roadDamages: state.roadDamages,
         resourceRequests: state.resourceRequests,
       },
-      new Set(COP_LAYERS.map((l) => l.key)),
+      new Set(editionCopLayers().map((l) => l.key)),
     );
     return mergeFeatureCollections(cop, annotationsToFeatureCollection(state.mapAnnotations));
   }, [fieldUnits, state.personnel, shelters, state.damages, state.roadDamages, state.resourceRequests, state.mapAnnotations]);
@@ -145,58 +147,66 @@ export function DashboardHomeView() {
   }, [derived.activeDistress]);
 
   // Alerts: only surface things that actually need command attention right now.
-  const alerts: { tone: Tone; icon: ReactNode; label: string; href: string }[] = [];
+  // Each carries its target module slug so alerts for modules the active edition
+  // hides are filtered out (no link to a 404'd page).
+  const allAlerts: { tone: Tone; icon: ReactNode; label: string; slug: string }[] = [];
   if (derived.activeDistress.length)
-    alerts.push({
+    allAlerts.push({
       tone: "critical",
       icon: <IconBell />,
       label: `${derived.activeDistress.length} active distress ${derived.activeDistress.length === 1 ? "signal" : "signals"}`,
-      href: moduleHref(eventId, "comms"),
+      slug: "comms",
     });
   if (derived.sheltersOver)
-    alerts.push({
+    allAlerts.push({
       tone: "critical",
       icon: <IconTent />,
       label: `${derived.sheltersOver} shelter${derived.sheltersOver === 1 ? "" : "s"} over capacity`,
-      href: moduleHref(eventId, "shelters"),
+      slug: "shelters",
     });
   if (stats.severeDamage)
-    alerts.push({
+    allAlerts.push({
       tone: "warn",
       icon: <IconTriangleAlert />,
       label: `${stats.severeDamage} severe damage ${stats.severeDamage === 1 ? "site" : "sites"}`,
-      href: moduleHref(eventId, "damage-assessment"),
+      slug: "damage-assessment",
     });
   if (stats.roadClosed)
-    alerts.push({
+    allAlerts.push({
       tone: "warn",
       icon: <IconRoad />,
       label: `${stats.roadClosed} road${stats.roadClosed === 1 ? "" : "s"} closed`,
-      href: moduleHref(eventId, "road-damages"),
+      slug: "road-damages",
     });
   if (derived.offlineUnits)
-    alerts.push({
+    allAlerts.push({
       tone: "warn",
       icon: <IconRadio />,
       label: `${derived.offlineUnits} field unit${derived.offlineUnits === 1 ? "" : "s"} offline`,
-      href: moduleHref(eventId, "comms"),
+      slug: "comms",
     });
   if (stats.electricityOutages > 0)
-    alerts.push({
+    allAlerts.push({
       tone: "warn",
       icon: <IconZap />,
       label: `${stats.electricityOutages.toLocaleString()} without power`,
-      href: moduleHref(eventId, "utilities-electricity"),
+      slug: "utilities-electricity",
     });
+  const alerts = allAlerts.filter((a) => isModuleInEdition(a.slug));
 
+  // "Units live" + "Active distress" are Live Ops comms data — drop them when that
+  // module is out of edition so the status strip doesn't cite a removed feature.
+  const comms = isModuleInEdition("comms");
   const kpis = [
     { label: "Personnel online", value: stats.personnelOnline, sub: `of ${stats.personnelTotal}`, tone: "neutral" as Tone },
-    {
-      label: "Units live",
-      value: derived.liveUnits,
-      sub: derived.offlineUnits ? `${derived.offlineUnits} offline` : "all up",
-      tone: (derived.offlineUnits ? "warn" : "ok") as Tone,
-    },
+    ...(comms
+      ? [{
+          label: "Units live",
+          value: derived.liveUnits,
+          sub: derived.offlineUnits ? `${derived.offlineUnits} offline` : "all up",
+          tone: (derived.offlineUnits ? "warn" : "ok") as Tone,
+        }]
+      : []),
     { label: "Open tasks", value: derived.openTasks, sub: `of ${derived.totalTasks}`, tone: "neutral" as Tone },
     {
       label: "Requests pending",
@@ -204,12 +214,14 @@ export function DashboardHomeView() {
       sub: `${stats.resourceRequests.ready} ready`,
       tone: (derived.pendingRequests ? "warn" : "ok") as Tone,
     },
-    {
-      label: "Active distress",
-      value: derived.activeDistress.length,
-      sub: derived.activeDistress.length ? "responding" : "clear",
-      tone: (derived.activeDistress.length ? "critical" : "ok") as Tone,
-    },
+    ...(comms
+      ? [{
+          label: "Active distress",
+          value: derived.activeDistress.length,
+          sub: derived.activeDistress.length ? "responding" : "clear",
+          tone: (derived.activeDistress.length ? "critical" : "ok") as Tone,
+        }]
+      : []),
   ];
 
   return (
@@ -276,7 +288,7 @@ export function DashboardHomeView() {
         <div className="ic-cop__alerts" role="alert">
           <span className="ic-cop__alerts-label">Needs attention</span>
           {alerts.map((a, i) => (
-            <Link key={i} href={a.href} className={`ic-cop__alert ic-cop__alert--${a.tone}`}>
+            <Link key={i} href={moduleHref(eventId, a.slug)} className={`ic-cop__alert ic-cop__alert--${a.tone}`}>
               <span className="ic-cop__alert-icon">{a.icon}</span>
               {a.label}
             </Link>
@@ -288,6 +300,8 @@ export function DashboardHomeView() {
           All clear — no distress signals, over-capacity shelters, or closed roads.
         </div>
       )}
+
+      <MyTasksCard />
 
       {/* ── The picture: map (where) + live feed (what) ── */}
       <div className="ic-cop__main">
@@ -320,7 +334,7 @@ export function DashboardHomeView() {
             )}
           </div>
           <div className="ic-cop__legend">
-            {COP_LAYERS.map((l) => (
+            {editionCopLayers().map((l) => (
               <span key={l.key} className="ic-cop__legend-item">
                 <span className="ic-cop__legend-dot" style={{ background: l.color }} aria-hidden />
                 {l.label}
@@ -395,18 +409,20 @@ export function DashboardHomeView() {
             { label: "Online", value: stats.personnelOnline },
           ]}
         />
-        <MetricTile
-          href={moduleHref(eventId, "comms")}
-          icon={<IconRadio />}
-          title="Field units"
-          value={derived.liveUnits}
-          unit={`/ ${fieldUnits.length} live`}
-          tone={derived.offlineUnits ? "warn" : "ok"}
-          rows={[
-            { label: "Live", value: derived.liveUnits, tone: "ok" },
-            { label: "Offline", value: derived.offlineUnits, tone: derived.offlineUnits ? "warn" : "neutral" },
-          ]}
-        />
+        {isModuleInEdition("comms") && (
+          <MetricTile
+            href={moduleHref(eventId, "comms")}
+            icon={<IconRadio />}
+            title="Field units"
+            value={derived.liveUnits}
+            unit={`/ ${fieldUnits.length} live`}
+            tone={derived.offlineUnits ? "warn" : "ok"}
+            rows={[
+              { label: "Live", value: derived.liveUnits, tone: "ok" },
+              { label: "Offline", value: derived.offlineUnits, tone: derived.offlineUnits ? "warn" : "neutral" },
+            ]}
+          />
+        )}
         <MetricTile
           href={moduleHref(eventId, "tasks")}
           icon={<IconCheckSquare />}
@@ -435,69 +451,79 @@ export function DashboardHomeView() {
             { label: "Ready", value: stats.resourceRequests.ready, tone: "ok" },
           ]}
         />
-        <MetricTile
-          href={moduleHref(eventId, "shelters")}
-          icon={<IconTent />}
-          title="Shelters"
-          value={derived.bedsUsed}
-          unit={derived.bedsTotal ? `/ ${derived.bedsTotal} beds` : "occupants"}
-          tone={derived.sheltersOver ? "critical" : "ok"}
-          progress={derived.bedsTotal ? derived.bedsUsed / derived.bedsTotal : 0}
-          progressLabel={
-            derived.bedsTotal
-              ? `${Math.round((derived.bedsUsed / derived.bedsTotal) * 100)}% full`
-              : `${shelters.length} shelters`
-          }
-          rows={[
-            { label: "Shelters", value: shelters.length },
-            { label: "Over capacity", value: derived.sheltersOver, tone: derived.sheltersOver ? "critical" : "neutral" },
-          ]}
-        />
-        <MetricTile
-          href={moduleHref(eventId, "damage-assessment")}
-          icon={<IconTriangleAlert />}
-          title="Damage"
-          value={stats.severeDamage + stats.minorDamage}
-          unit="sites"
-          tone={stats.severeDamage ? "critical" : stats.minorDamage ? "warn" : "ok"}
-          rows={[
-            { label: "Severe", value: stats.severeDamage, tone: stats.severeDamage ? "critical" : "neutral" },
-            { label: "Minor", value: stats.minorDamage },
-          ]}
-        />
-        <MetricTile
-          href={moduleHref(eventId, "road-damages")}
-          icon={<IconRoad />}
-          title="Roads"
-          value={stats.roadClosed}
-          unit="closed"
-          tone={stats.roadClosed ? "warn" : "ok"}
-          rows={[
-            { label: "Closed", value: stats.roadClosed, tone: stats.roadClosed ? "warn" : "neutral" },
-            { label: "One lane", value: stats.roadOneLane },
-            { label: "Open", value: stats.roadOpen, tone: "ok" },
-          ]}
-        />
-        <MetricTile
-          href={moduleHref(eventId, "utilities-electricity")}
-          icon={<IconZap />}
-          title="Power"
-          value={stats.electricityOutages.toLocaleString()}
-          unit="without power"
-          tone={stats.electricityOutages ? "warn" : "ok"}
-        />
-        <MetricTile
-          href={moduleHref(eventId, "residents")}
-          icon={<IconHome />}
-          title="Residents"
-          value={stats.estimatedAffectedTotal.toLocaleString()}
-          unit="affected"
-          tone="neutral"
-          rows={[
-            { label: "Areas", value: stats.residentAreasTotal },
-            { label: "Population", value: stats.censusPopulationTotal.toLocaleString() },
-          ]}
-        />
+        {isModuleInEdition("shelters") && (
+          <MetricTile
+            href={moduleHref(eventId, "shelters")}
+            icon={<IconTent />}
+            title="Shelters"
+            value={derived.bedsUsed}
+            unit={derived.bedsTotal ? `/ ${derived.bedsTotal} beds` : "occupants"}
+            tone={derived.sheltersOver ? "critical" : "ok"}
+            progress={derived.bedsTotal ? derived.bedsUsed / derived.bedsTotal : 0}
+            progressLabel={
+              derived.bedsTotal
+                ? `${Math.round((derived.bedsUsed / derived.bedsTotal) * 100)}% full`
+                : `${shelters.length} shelters`
+            }
+            rows={[
+              { label: "Shelters", value: shelters.length },
+              { label: "Over capacity", value: derived.sheltersOver, tone: derived.sheltersOver ? "critical" : "neutral" },
+            ]}
+          />
+        )}
+        {isModuleInEdition("damage-assessment") && (
+          <MetricTile
+            href={moduleHref(eventId, "damage-assessment")}
+            icon={<IconTriangleAlert />}
+            title="Damage"
+            value={stats.severeDamage + stats.minorDamage}
+            unit="sites"
+            tone={stats.severeDamage ? "critical" : stats.minorDamage ? "warn" : "ok"}
+            rows={[
+              { label: "Severe", value: stats.severeDamage, tone: stats.severeDamage ? "critical" : "neutral" },
+              { label: "Minor", value: stats.minorDamage },
+            ]}
+          />
+        )}
+        {isModuleInEdition("road-damages") && (
+          <MetricTile
+            href={moduleHref(eventId, "road-damages")}
+            icon={<IconRoad />}
+            title="Roads"
+            value={stats.roadClosed}
+            unit="closed"
+            tone={stats.roadClosed ? "warn" : "ok"}
+            rows={[
+              { label: "Closed", value: stats.roadClosed, tone: stats.roadClosed ? "warn" : "neutral" },
+              { label: "One lane", value: stats.roadOneLane },
+              { label: "Open", value: stats.roadOpen, tone: "ok" },
+            ]}
+          />
+        )}
+        {isModuleInEdition("utilities-electricity") && (
+          <MetricTile
+            href={moduleHref(eventId, "utilities-electricity")}
+            icon={<IconZap />}
+            title="Power"
+            value={stats.electricityOutages.toLocaleString()}
+            unit="without power"
+            tone={stats.electricityOutages ? "warn" : "ok"}
+          />
+        )}
+        {isModuleInEdition("residents") && (
+          <MetricTile
+            href={moduleHref(eventId, "residents")}
+            icon={<IconHome />}
+            title="Residents"
+            value={stats.estimatedAffectedTotal.toLocaleString()}
+            unit="affected"
+            tone="neutral"
+            rows={[
+              { label: "Areas", value: stats.residentAreasTotal },
+              { label: "Population", value: stats.censusPopulationTotal.toLocaleString() },
+            ]}
+          />
+        )}
         <MetricTile
           href={moduleHref(eventId, "inventory")}
           icon={<IconBoxes />}
