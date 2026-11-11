@@ -20,7 +20,12 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      # Build both editions: the full product and the gated Command Core edition
+      # that ships today. build:core sets NEXT_PUBLIC_EDITION=command_core, so a
+      # compile error behind the edition gate (or a module wrongly referenced from
+      # a core-included one) fails CI instead of surfacing at launch.
       - run: npm run build
+      - run: npm run build:core
 
   smoke:
     name: DB + storage smoke test
@@ -61,6 +66,11 @@ jobs:
 
       - name: Run migrations (tracked runner)
         run: npm run db:migrate
+
+      # Verify the tracked runner reports a fully-migrated schema (no pending files,
+      # no checksum drift). Cheap gate that catches an edited/renamed migration.
+      - name: Verify migration status
+        run: npm run db:status
 
       - name: Wait for MinIO bucket
         run: |

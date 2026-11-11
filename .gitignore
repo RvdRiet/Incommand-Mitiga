@@ -10,6 +10,10 @@ npm-debug.log*
 coverage
 .turbo
 drizzle/meta
+backups/
+
+# TypeScript incremental build cache (regenerated on every build)
+*.tsbuildinfo
 
 # Electron desktop build output
 dist-electron/
